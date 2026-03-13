@@ -43,27 +43,34 @@ export const ActionButtons: React.FC<ActionButtonsProps> = React.memo(({ hold, r
   const s      = "clamp(52px, 14vw, 72px)";
   const sLarge = "clamp(62px, 17vw, 86px)";
   const sSmall = "clamp(42px, 11vw, 56px)";
+  const btnBase = "rounded-full border-b-4 active:border-b-0 active:translate-y-0.5 shadow-md flex flex-col items-center justify-center touch-none select-none";
+
   return (
-    <div className="flex flex-col items-end gap-2">
-      <ControlButton onClick={hold} cooldown={200}
-        className="rounded-full border-b-4 border-gray-700 bg-gray-600 text-gray-200 active:border-b-0 active:translate-y-0.5 shadow-md flex flex-col items-center justify-center touch-none select-none"
-        style={{ width: sSmall, height: sSmall }}>
-        <span style={{ fontSize: 'clamp(8px, 2.2vw, 11px)', fontWeight: 'bold' }}>HOLD</span>
-      </ControlButton>
-      <div className="flex items-end gap-2">
+    <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(14px, 4vw, 24px)', marginBottom: 'clamp(10px, 3vw, 20px)' }}>
+
+      {/* 左カラム: HOLD（上）→ CCW（下） */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'clamp(6px, 1.5vw, 10px)' }}>
+        <ControlButton onClick={hold} cooldown={200}
+          className={`${btnBase} border-gray-700 bg-gray-600 text-gray-200`}
+          style={{ width: sSmall, height: sSmall }}>
+          <span style={{ fontSize: 'clamp(8px, 2.2vw, 11px)', fontWeight: 'bold' }}>HOLD</span>
+        </ControlButton>
         <ControlButton onAction={rotateCCW} cooldown={0}
-          className="rounded-full border-b-4 border-pink-900 bg-pink-700 text-white active:border-b-0 active:translate-y-0.5 shadow-md flex flex-col items-center justify-center touch-none select-none"
+          className={`${btnBase} border-pink-900 bg-pink-700 text-white`}
           style={{ width: s, height: s }}>
           <RotateCcw style={{ width: 'clamp(18px, 4.5vw, 26px)', height: 'clamp(18px, 4.5vw, 26px)' }} />
           <span style={{ fontSize: 'clamp(7px, 2vw, 10px)', fontWeight: 'bold', opacity: 0.8 }}>CCW</span>
         </ControlButton>
-        <ControlButton onAction={rotate} cooldown={0}
-          className="rounded-full border-b-4 border-purple-800 bg-purple-600 text-white active:border-b-0 active:translate-y-0.5 shadow-md flex flex-col items-center justify-center touch-none select-none"
-          style={{ width: sLarge, height: sLarge }}>
-          <RotateCw style={{ width: 'clamp(22px, 5.5vw, 32px)', height: 'clamp(22px, 5.5vw, 32px)' }} />
-          <span style={{ fontSize: 'clamp(8px, 2.2vw, 11px)', fontWeight: 'bold', opacity: 0.8 }}>CW</span>
-        </ControlButton>
       </div>
+
+      {/* 右カラム: CW（縦中央） */}
+      <ControlButton onAction={rotate} cooldown={0}
+        className={`${btnBase} border-purple-800 bg-purple-600 text-white`}
+        style={{ width: sLarge, height: sLarge }}>
+        <RotateCw style={{ width: 'clamp(22px, 5.5vw, 32px)', height: 'clamp(22px, 5.5vw, 32px)' }} />
+        <span style={{ fontSize: 'clamp(8px, 2.2vw, 11px)', fontWeight: 'bold', opacity: 0.8 }}>CW</span>
+      </ControlButton>
+
     </div>
   );
 });

@@ -15,7 +15,7 @@ import SettingsModal from './components/ui/SettingsModal';
 import TitleScreen from './components/ui/TitleScreen';
 import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 
-const version = "1.11";
+const version = "1.13";
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('title');
@@ -45,17 +45,16 @@ function App() {
   const handleSeToggle  = (on: boolean) => { setSeOn(on);  audioService.setSeEnabled(on);  };
 
   useEffect(() => {
-    // マッチング画面中はタイトルBGMをそのまま継続（何もしない）
     if (currentScreen === 'matching') return;
 
     if (showTitle) {
       audioService.startBGM('title');
     } else if (gameStarted && !gameOver && !isWinner) {
       if (paused) {
-        audioService.pauseBGM();
+        audioService.pauseBGM?.();
       } else {
-        if (audioService.getBgmIsPaused()) {
-          audioService.resumeBGM();
+        if (audioService.getBgmIsPaused?.()) {
+          audioService.resumeBGM?.();
         } else {
           audioService.startBGM('game');
         }
