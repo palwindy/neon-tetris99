@@ -15,6 +15,7 @@ interface ButtonProps {
   repeatInterval?: number;
   /** Milliseconds to wait before accepting another click (Cooldown) */
   cooldown?: number;
+  style?: React.CSSProperties;
 }
 
 export const ControlButton: React.FC<ButtonProps> = ({ 
@@ -26,7 +27,8 @@ export const ControlButton: React.FC<ButtonProps> = ({
   repeat = false,
   repeatDelay = 200, 
   repeatInterval = 100,
-  cooldown = 0
+  cooldown = 0,
+  style
 }) => {
   const isPressed = useRef(false);
   const timeoutRef = useRef<number | null>(null);
@@ -120,6 +122,7 @@ export const ControlButton: React.FC<ButtonProps> = ({
       onMouseLeave={handleEnd}
       onContextMenu={(e) => e.preventDefault()}
       disabled={disabled}
+      style={style}
     >
       {children}
     </button>

@@ -128,64 +128,38 @@ interface DPadProps {
   hardDrop: () => void;
 }
 
-const DPad: React.FC<DPadProps> = React.memo(({ move, hardDrop }) => (
-  // Reduced base size from w-64 to w-56
-  <div className="relative w-56 h-56 shrink-0">
-    {/* Up (Hard Drop) */}
-    <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-      <ControlButton 
-        onAction={hardDrop} 
-        repeat={false} 
-        cooldown={500} 
-        className="w-20 h-20 bg-gray-800 rounded-t-2xl rounded-b-md border-b-4 border-gray-950 active:border-b-0 active:translate-y-1 shadow-lg flex items-center justify-center"
-      >
-        <ArrowUp size={40} className="text-cyan-400" />
+const DPad: React.FC<DPadProps> = React.memo(({ move, hardDrop }) => {
+  const btn = "flex items-center justify-center bg-gray-800 border-b-4 border-gray-950 active:border-b-0 active:translate-y-0.5 shadow-md touch-none select-none";
+  const s = "clamp(52px, 14vw, 72px)"; // ボタン1個のサイズ（正方形）
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: `${s} ${s} ${s}`, gridTemplateRows: `${s} ${s} ${s}`, gap: '3px' }}>
+      {/* 上段 */}
+      <div /> {/* 空 */}
+      <ControlButton onAction={hardDrop} repeat={false} cooldown={500}
+        className={`${btn} rounded-t-xl rounded-b-sm`} style={{ width: s, height: s }}>
+        <ArrowUp style={{ width: 'clamp(20px, 5vw, 28px)', height: 'clamp(20px, 5vw, 28px)' }} className="text-cyan-400" />
       </ControlButton>
-    </div>
-    
-    {/* Left */}
-    <div className="absolute top-1/2 left-0 -translate-y-1/2">
-      <ControlButton 
-        onAction={() => move({ x: -1, y: 0 })} 
-        repeat={true}
-        repeatDelay={300}
-        repeatInterval={150}
-        className="w-20 h-20 bg-gray-800 rounded-l-2xl rounded-r-md border-b-4 border-gray-950 active:border-b-0 active:translate-y-1 shadow-lg flex items-center justify-center"
-      >
-        <ArrowLeft size={40} />
+      <div /> {/* 空 */}
+      {/* 中段 */}
+      <ControlButton onAction={() => move({ x: -1, y: 0 })} repeat={true} repeatDelay={300} repeatInterval={150}
+        className={`${btn} rounded-l-xl rounded-r-sm`} style={{ width: s, height: s }}>
+        <ArrowLeft style={{ width: 'clamp(20px, 5vw, 28px)', height: 'clamp(20px, 5vw, 28px)' }} />
       </ControlButton>
-    </div>
-
-    {/* Right */}
-    <div className="absolute top-1/2 right-0 -translate-y-1/2">
-      <ControlButton 
-        onAction={() => move({ x: 1, y: 0 })} 
-        repeat={true}
-        repeatDelay={300}
-        repeatInterval={150}
-        className="w-20 h-20 bg-gray-800 rounded-r-2xl rounded-l-md border-b-4 border-gray-950 active:border-b-0 active:translate-y-1 shadow-lg flex items-center justify-center"
-      >
-        <ArrowRight size={40} />
+      <div className="bg-gray-800 rounded-md" style={{ width: s, height: s }} /> {/* センター */}
+      <ControlButton onAction={() => move({ x: 1, y: 0 })} repeat={true} repeatDelay={300} repeatInterval={150}
+        className={`${btn} rounded-r-xl rounded-l-sm`} style={{ width: s, height: s }}>
+        <ArrowRight style={{ width: 'clamp(20px, 5vw, 28px)', height: 'clamp(20px, 5vw, 28px)' }} />
       </ControlButton>
-    </div>
-
-    {/* Down */}
-    <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
-      <ControlButton 
-        onAction={() => move({ x: 0, y: 1 })} 
-        repeat={true}
-        repeatDelay={200}
-        repeatInterval={100}
-        className="w-20 h-20 bg-gray-800 rounded-b-2xl rounded-t-md border-b-4 border-gray-950 active:border-b-0 active:translate-y-1 shadow-lg flex items-center justify-center"
-      >
-        <ArrowDown size={40} />
+      {/* 下段 */}
+      <div /> {/* 空 */}
+      <ControlButton onAction={() => move({ x: 0, y: 1 })} repeat={true} repeatDelay={200} repeatInterval={100}
+        className={`${btn} rounded-b-xl rounded-t-sm`} style={{ width: s, height: s }}>
+        <ArrowDown style={{ width: 'clamp(20px, 5vw, 28px)', height: 'clamp(20px, 5vw, 28px)' }} />
       </ControlButton>
+      <div /> {/* 空 */}
     </div>
-    
-    {/* Center D-Pad fill (Visual) */}
-    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 bg-gray-800 -z-10 rounded-lg"></div>
-  </div>
-));
+  );
+});
 
 interface ActionButtonsProps {
   hold: () => void;
@@ -193,51 +167,44 @@ interface ActionButtonsProps {
   rotateCCW: () => void;
 }
 
-const ActionButtons: React.FC<ActionButtonsProps> = React.memo(({ hold, rotate, rotateCCW }) => (
-  // Revised layout: Hold on top, CCW below it, CW to the right
-  <div className="relative w-52 h-48 shrink-0">
-    {/* Hold Button (Top Leftish) */}
-    <div className="absolute top-0 left-2">
-      <ControlButton 
-        onClick={hold} 
-        className="w-16 h-16 rounded-full border-b-4 border-gray-800 bg-gray-600 text-gray-200 active:border-b-0 active:translate-y-1 shadow-lg flex flex-col items-center justify-center"
-        cooldown={200}
-      >
-        <span className="text-[10px] font-bold">HOLD</span>
+const ActionButtons: React.FC<ActionButtonsProps> = React.memo(({ hold, rotate, rotateCCW }) => {
+  const s      = "clamp(52px, 14vw, 72px)";   // 通常ボタン
+  const sLarge = "clamp(62px, 17vw, 86px)";   // CWボタン（大）
+  const sSmall = "clamp(42px, 11vw, 56px)";   // HOLDボタン（小）
+  return (
+    <div className="flex flex-col items-end gap-2">
+      {/* 上段: HOLD */}
+      <ControlButton onClick={hold} cooldown={200}
+        className="rounded-full border-b-4 border-gray-700 bg-gray-600 text-gray-200 active:border-b-0 active:translate-y-0.5 shadow-md flex flex-col items-center justify-center touch-none select-none"
+        style={{ width: sSmall, height: sSmall }}>
+        <span style={{ fontSize: 'clamp(8px, 2.2vw, 11px)', fontWeight: 'bold' }}>HOLD</span>
       </ControlButton>
+      {/* 下段: CCW + CW 横並び */}
+      <div className="flex items-end gap-2">
+        <ControlButton onAction={rotateCCW} cooldown={0}
+          className="rounded-full border-b-4 border-pink-900 bg-pink-700 text-white active:border-b-0 active:translate-y-0.5 shadow-md flex flex-col items-center justify-center touch-none select-none"
+          style={{ width: s, height: s }}>
+          <RotateCcw style={{ width: 'clamp(18px, 4.5vw, 26px)', height: 'clamp(18px, 4.5vw, 26px)' }} />
+          <span style={{ fontSize: 'clamp(7px, 2vw, 10px)', fontWeight: 'bold', opacity: 0.8 }}>CCW</span>
+        </ControlButton>
+        <ControlButton onAction={rotate} cooldown={0}
+          className="rounded-full border-b-4 border-purple-800 bg-purple-600 text-white active:border-b-0 active:translate-y-0.5 shadow-md flex flex-col items-center justify-center touch-none select-none"
+          style={{ width: sLarge, height: sLarge }}>
+          <RotateCw style={{ width: 'clamp(22px, 5.5vw, 32px)', height: 'clamp(22px, 5.5vw, 32px)' }} />
+          <span style={{ fontSize: 'clamp(8px, 2.2vw, 11px)', fontWeight: 'bold', opacity: 0.8 }}>CW</span>
+        </ControlButton>
+      </div>
     </div>
-
-    {/* CCW Rotation (Bottom Left - Below Hold) */}
-    <div className="absolute bottom-0 left-0">
-     <ControlButton 
-       onAction={rotateCCW}
-       cooldown={0}
-       className="w-20 h-20 bg-pink-700 rounded-full border-b-4 border-pink-900 active:border-b-0 active:translate-y-1 shadow-lg flex flex-col items-center justify-center"
-     >
-       <RotateCcw size={36} className="text-white" />
-       <span className="text-xs font-bold opacity-70">CCW</span>
-     </ControlButton>
-    </div>
-
-    {/* CW Rotation (Bottom Right - Beside CCW) */}
-    <div className="absolute bottom-0 right-0">
-     <ControlButton 
-       onAction={rotate}
-       cooldown={0}
-       className="w-24 h-24 bg-purple-600 rounded-full border-b-4 border-purple-800 active:border-b-0 active:translate-y-1 shadow-lg flex flex-col items-center justify-center"
-     >
-       <RotateCw size={40} className="text-white" />
-       <span className="text-sm font-bold opacity-70">CW</span>
-     </ControlButton>
-    </div>
-  </div>
-));
+  );
+});
 
 // --- Main App ---
 
 function App() {
-  const version = "1.03";
+  const version = "1.06";
   const [currentScreen, setCurrentScreen] = useState('title');
+  const [showTitle, setShowTitle] = useState(true);
+  
   const {
     activePiece, activeShape, position, grid,
     nextQueue, holdPiece, score, lines, level,
@@ -261,14 +228,14 @@ function App() {
   );
 
   useEffect(() => {
-    if (gameStarted && !paused && !gameOver && !isWinner) {
-      audioService.startBGM('game');
-    } else if (!gameStarted && !gameOver && !isWinner) {
+    if (showTitle) {
       audioService.startBGM('title');
+    } else if (gameStarted && !paused && !gameOver && !isWinner) {
+      audioService.startBGM('game');
     } else {
       audioService.stopBGM();
     }
-  }, [gameStarted, paused, gameOver, isWinner]);
+  }, [showTitle, gameStarted, paused, gameOver, isWinner]);
 
   // Attack Warning Blink Speed Logic
   useEffect(() => {
@@ -307,6 +274,16 @@ function App() {
   const handleGameStart = (roomId: string, players: MultiPlayer[]) => {
     setCurrentScreen('game');
     resetGame('MULTI');
+  };
+  
+  const handleStartGame = (mode: 'SINGLE' | 'CPU') => {
+    setShowTitle(false);
+    resetGame(mode);
+  };
+
+  const handleQuitToTitle = () => {
+    quitGame();
+    setShowTitle(true);
   };
 
   const SettingsModal = () => (
@@ -423,7 +400,7 @@ function App() {
          <PlayerAttackEffect key={playerAttack.id} damage={playerAttack.damage} />
       )}
 
-      {!gameStarted && !gameOver && !isWinner && !showSettings && (
+      {!gameStarted && !gameOver && !isWinner && !showSettings && currentScreen === 'game' && (
         <div className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center z-20 backdrop-blur-sm rounded-lg">
           
           <TitleLogo />
@@ -498,7 +475,7 @@ function App() {
             RETRY
           </button>
           <button 
-            onClick={quitGame}
+            onClick={handleQuitToTitle}
             className="mt-4 text-white/70 hover:text-white text-sm"
           >
             QUIT
@@ -519,7 +496,7 @@ function App() {
             PLAY AGAIN
           </button>
           <button 
-            onClick={quitGame}
+            onClick={handleQuitToTitle}
             className="mt-6 text-white/80 hover:text-white text-sm z-20 underline decoration-white/30"
           >
             RETURN TO MENU
@@ -546,7 +523,7 @@ function App() {
           </button>
           
           <button 
-            onClick={quitGame}
+            onClick={handleQuitToTitle}
             className="w-full max-w-[180px] py-2 bg-red-900/80 hover:bg-red-800 text-white font-bold rounded-lg shadow-lg active:scale-95 flex items-center justify-center gap-2 border border-red-700 text-sm"
           >
             <Home size={16} /> TITLE
@@ -629,13 +606,12 @@ function App() {
           </div>
         </div>
 
-        {/* Controller Area */}
-        <div className="w-full max-w-lg h-64 pb-6 px-4 shrink-0 z-10 flex justify-between items-end touch-none">
-          <div className="transform scale-75 origin-bottom-left">
-             <DPad move={move} hardDrop={hardDrop} />
-          </div>
-          <div className="transform scale-90 origin-bottom-right">
-             <ActionButtons hold={hold} rotate={rotate} rotateCCW={rotateCCW} />
+        {/* Controller Area ポートレート */}
+        <div className="w-full max-w-lg shrink-0 z-10 touch-none"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom, 8px)', paddingLeft: '8px', paddingRight: '8px', paddingTop: '6px' }}>
+          <div className="flex justify-between items-end">
+            <DPad move={move} hardDrop={hardDrop} />
+            <ActionButtons hold={hold} rotate={rotate} rotateCCW={rotateCCW} />
           </div>
         </div>
       </div>
@@ -646,13 +622,13 @@ function App() {
         {/* LEFT: Controls & Title */}
         <div className="flex-1 flex flex-col items-center justify-between pb-1 pt-2 gap-2 bg-gray-900/20 border-r border-gray-800/50 min-w-0">
            {/* Title */}
-           <div className="transform scale-90 mt-2 flex items-baseline">
+           <div className="mt-2 flex items-baseline">
                <h1 className="text-xs font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">NEON 99</h1>
                <span className="text-xs text-gray-500 ml-1.5">v{version}</span>
            </div>
            
            {/* DPad */}
-           <div className="transform scale-75 origin-bottom mb-2">
+           <div className="mb-2">
              <DPad move={move} hardDrop={hardDrop} />
            </div>
         </div>
@@ -725,14 +701,66 @@ function App() {
            </div>
 
            {/* Buttons */}
-           <div className="transform scale-90 origin-bottom mb-2">
+           <div className="mb-2">
              <ActionButtons hold={hold} rotate={rotate} rotateCCW={rotateCCW} />
            </div>
         </div>
 
       </div>
-      {currentScreen === 'matching' && <MatchingScreen onGameStart={handleGameStart} onBack={() => setCurrentScreen('title')} />}
+      {currentScreen === 'matching' && <MatchingScreen onGameStart={handleGameStart} onBack={() => { setShowTitle(true); setCurrentScreen('title'); }} />}
 
+      {/* ===== TITLE SCREEN（全画面オーバーレイ） ===== */}
+      {showTitle && (
+        <div className="fixed inset-0 z-[100] bg-neutral-950 flex flex-col items-center justify-center"
+          style={{ background: 'radial-gradient(ellipse at center, #1a0a2e 0%, #0a0a14 70%)' }}>
+
+          <TitleLogo />
+
+          <div className="flex flex-col gap-3 mb-6 w-full max-w-[260px] px-4">
+            <button
+              onClick={() => handleStartGame('SINGLE')}
+              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-3 rounded-full shadow-[0_0_20px_rgba(147,51,234,0.5)] active:scale-95 text-lg tracking-wider hover:brightness-110 transition-all flex items-center justify-center gap-2"
+            >
+              <User size={20} /> SINGLE PLAY
+            </button>
+
+            <button
+              onClick={() => handleStartGame('CPU')}
+              className="w-full bg-gray-800/80 border border-gray-600 text-gray-300 font-bold py-2 rounded-full shadow-lg active:scale-95 tracking-wide hover:bg-gray-700 transition-all hover:text-white hover:border-gray-500 flex items-center justify-center gap-2"
+            >
+              <Bot size={18} /> VS CPU
+            </button>
+
+            <button
+              onClick={() => { setShowTitle(false); setCurrentScreen('matching'); }}
+              className="w-full bg-gray-800/80 border border-gray-600 text-gray-300 font-bold py-2 rounded-full shadow-lg active:scale-95 tracking-wide hover:bg-gray-700 transition-all hover:text-white hover:border-gray-500 flex items-center justify-center gap-2"
+            >
+              <Users size={18} /> VS MULTI
+            </button>
+          </div>
+
+          {/* BGM選択・設定ボタン */}
+          <div className="flex gap-3">
+            <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept="audio/*" className="hidden" />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs py-2 px-4 rounded-lg border border-gray-600 flex items-center gap-2 active:scale-95 transition-colors"
+            >
+              <FolderOpen size={14} />
+              <span className="truncate max-w-[100px]">{bgmName || 'Select BGM'}</span>
+            </button>
+            <button
+              onClick={() => setShowSettings(true)}
+              className="bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs py-2 px-4 rounded-lg border border-gray-600 flex items-center gap-2 active:scale-95 transition-colors"
+            >
+              <Settings size={14} /> CONFIG
+            </button>
+          </div>
+
+          {/* バージョン表示（任意） */}
+          <p className="mt-6 text-[10px] text-gray-700 tracking-widest">v{version}</p>
+        </div>
+      )}
     </div>
   );
 }

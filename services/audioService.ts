@@ -16,16 +16,16 @@ class AudioService {
   // Note: Served relative to public root. 
   // e.g. /public/assets/foo.mp3 -> /assets/foo.mp3
   private readonly ASSETS = {
-    bgm_title: '/assets/bgm_title.mp3',
-    bgm_game: '/assets/bgm_game.mp3',
-    se_move: '/assets/se_move.wav',
-    se_rotate: '/assets/se_rotate.wav',
-    se_drop: '/assets/se_drop.wav',
-    se_lock: '/assets/se_lock.wav',
-    se_clear: '/assets/se_clear.wav',
-    se_tspin: '/assets/se_tspin.wav',
-    se_gameover: '/assets/se_gameover.wav',
-    se_hold: '/assets/se_move.wav',
+    bgm_title:    '/assets/bgm_title.mp3',
+    bgm_game:     '/assets/bgm_game.mp3',
+    se_move:      '/assets/se_move.mp3',
+    se_rotate:    '/assets/se_rotate.mp3',
+    se_drop:      '/assets/se_drop.mp3',
+    se_lock:      '/assets/se_lock.mp3',
+    se_clear:     '/assets/se_clear.mp3',
+    se_tspin:     '/assets/se_tspin.mp3',
+    se_gameover:  '/assets/se_gameover.mp3',
+    se_hold:      '/assets/se_move.mp3',
   };
 
   constructor() {

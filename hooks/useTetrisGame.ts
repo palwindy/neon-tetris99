@@ -885,18 +885,35 @@ export const useTetrisGame = () => {
   };
 
   const quitGame = () => {
+    // --- Refを即座にリセット（進行中のsetTimeoutが誤動作しないよう先に実行）---
+    isClearingRef.current = false;
+    isLockingRef.current = false;
+    hardDropLockedRef.current = false;
+    lockStartTimeRef.current = null;
+    gameStateRef.current = {
+      ...gameStateRef.current,
+      gameStarted: false,
+      paused: false,
+      gameOver: false,
+      isWinner: false,
+    };
+
+    // --- React State をリセット ---
     setGameStarted(false);
     setGameOver(false);
     setIsWinner(false);
     setPaused(false);
+    setClearingRows([]);
     setGrid(createGrid());
     setScore(0);
     setLines(0);
     setLevel(1);
     setCombo(-1);
     setBackToBack(false);
-    lockStartTimeRef.current = null;
+    setSpecialMessage(null);
+    setPendingGarbage(0);
     audioService.setDangerLevel(0);
+    audioService.stopBGM();
   };
 
   const togglePause = () => {
