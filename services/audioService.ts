@@ -42,6 +42,10 @@ class AudioService {
 
       if (!this.ctx) {
         this.ctx = new AudioCtx();
+        // iOS/Chrome の autoplay policy 対策
+        if (this.ctx.state === 'suspended') {
+          await this.ctx.resume().catch(() => {});
+        }
 
         this.masterGain = this.ctx.createGain();
         this.masterGain.gain.value = 1.0;
@@ -114,11 +118,9 @@ class AudioService {
 
   startBGM(mode: 'title' | 'game') {
     if (!this.bgmEnabled) return;
-
-    // 未初期化なら init してから再生（pending に積む）
     if (!this.ctx || !this.isLoaded) {
       this.pendingBGM = mode;
-      this.init();
+      if (!this.isInitializing) this.init();
       return;
     }
 
@@ -170,7 +172,12 @@ class AudioService {
   // --- SE ---
 
   private playSE(key: string) {
-    if (!this.seEnabled || !this.ctx || !this.seGain) return;
+    if (!this.seEnabled) return;
+    // ctx未初期化なら init してフォールバック音で対応
+    if (!this.ctx || !this.seGain) {
+      this.init().then(() => this.playSE(key)).catch(() => {});
+      return;
+    }
     if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
 
     const buffer = this.buffers[key];
