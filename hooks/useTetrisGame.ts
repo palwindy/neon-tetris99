@@ -843,7 +843,7 @@ export const useTetrisGame = () => {
     isClearingRef.current = false;
     isLockingRef.current = false;
     lockStartTimeRef.current = null;
-    audioService.init();
+    hardDropLockedRef.current = false;
     audioService.setDangerLevel(0);
 
     const initialBag = [...getTetrominoBag(), ...getTetrominoBag()];
