@@ -20,7 +20,7 @@ export interface Position {
   y: number;
 }
 
-export type GameMode = 'SINGLE' | 'CPU';
+export type GameMode = 'SINGLE' | 'CPU' | 'MULTI';
 
 export interface PlayerState {
   grid: Grid;
@@ -48,3 +48,18 @@ export type ControllerAction =
   | 'PAUSE';
 
 export type ControllerMapping = Record<ControllerAction, number>;
+
+export type MultiPlayerStatus = 'searching' | 'found' | 'ready' | 'starting';
+
+export interface MultiPlayer {
+  id: string;
+  name: string;
+  status: MultiPlayerStatus;
+  isHost: boolean;
+}
+
+export interface MultiRoomState {
+  roomId: string;
+  players: MultiPlayer[];
+  phase: 'matching' | 'countdown' | 'playing';
+}

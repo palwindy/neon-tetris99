@@ -7,7 +7,8 @@ import { ControlButton } from './components/Button';
 import { TETROMINOS, COLOR_MAP } from './constants';
 import { RotateCw, RotateCcw, ArrowDown, ArrowUp, ArrowLeft, ArrowRight, Pause, Play, Smartphone, Wifi, Music, Home, FolderOpen, Gamepad2, Settings, X, RotateCcw as ResetIcon, User, Users, Cpu, Bot, Trophy, AlertTriangle, Zap, Skull } from 'lucide-react';
 import { audioService } from './services/audioService';
-import { ControllerAction } from './types';
+import { ControllerAction, MultiPlayer } from './types';
+import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 
 interface NextQueueItemProps {
   type: string | null;
@@ -235,6 +236,8 @@ const ActionButtons: React.FC<ActionButtonsProps> = React.memo(({ hold, rotate, 
 // --- Main App ---
 
 function App() {
+  const version = "1.03";
+  const [currentScreen, setCurrentScreen] = useState('title');
   const {
     activePiece, activeShape, position, grid,
     nextQueue, holdPiece, score, lines, level,
@@ -299,6 +302,11 @@ function App() {
         alert('Failed to load audio file.');
       }
     }
+  };
+  
+  const handleGameStart = (roomId: string, players: MultiPlayer[]) => {
+    setCurrentScreen('game');
+    resetGame('MULTI');
   };
 
   const SettingsModal = () => (
@@ -422,7 +430,7 @@ function App() {
           
           <div className="flex flex-col gap-3 mb-6 w-full max-w-[240px]">
               <button 
-                onClick={() => resetGame('SINGLE')}
+                onClick={() => { resetGame('SINGLE'); setCurrentScreen('game'); }}
                 className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-3 rounded-full shadow-[0_0_20px_rgba(147,51,234,0.5)] active:scale-95 text-lg tracking-wider hover:brightness-110 transition-all flex items-center justify-center gap-2"
               >
                 <User size={20} />
@@ -430,7 +438,7 @@ function App() {
               </button>
               
               <button 
-                onClick={() => resetGame('CPU')}
+                onClick={() => { resetGame('CPU'); setCurrentScreen('game'); }}
                 className="w-full bg-gray-800/80 border border-gray-600 text-gray-300 font-bold py-2 rounded-full shadow-lg active:scale-95 tracking-wide hover:bg-gray-700 transition-all hover:text-white hover:border-gray-500 flex items-center justify-center gap-2"
               >
                 <Bot size={18} />
@@ -438,7 +446,7 @@ function App() {
               </button>
 
               <button 
-                onClick={() => alert("Multiplayer Mode: Coming Soon!")}
+                onClick={() => setCurrentScreen('matching')}
                 className="w-full bg-gray-800/80 border border-gray-600 text-gray-300 font-bold py-2 rounded-full shadow-lg active:scale-95 tracking-wide hover:bg-gray-700 transition-all hover:text-white hover:border-gray-500 flex items-center justify-center gap-2"
               >
                 <Users size={18} />
@@ -556,7 +564,10 @@ function App() {
         
         {/* Top Status Bar */}
         <div className="w-full max-w-lg px-4 py-1 flex justify-between items-center bg-neutral-900 border-b border-neutral-800 z-10 shrink-0 h-10">
-          <h1 className="text-sm font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">NEON 99</h1>
+          <div className="flex items-baseline">
+            <h1 className="text-sm font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">NEON 99</h1>
+            <span className="text-xs text-gray-400 ml-2">v{version}</span>
+          </div>
           <div className="flex gap-4 font-mono text-xs">
              <div>LVL <span className="text-yellow-400">{level}</span></div>
              <div>LINES <span className="text-green-400">{lines}</span></div>
@@ -635,8 +646,9 @@ function App() {
         {/* LEFT: Controls & Title */}
         <div className="flex-1 flex flex-col items-center justify-between pb-1 pt-2 gap-2 bg-gray-900/20 border-r border-gray-800/50 min-w-0">
            {/* Title */}
-           <div className="transform scale-90 mt-2">
+           <div className="transform scale-90 mt-2 flex items-baseline">
                <h1 className="text-xs font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">NEON 99</h1>
+               <span className="text-xs text-gray-500 ml-1.5">v{version}</span>
            </div>
            
            {/* DPad */}
@@ -719,6 +731,7 @@ function App() {
         </div>
 
       </div>
+      {currentScreen === 'matching' && <MatchingScreen onGameStart={handleGameStart} onBack={() => setCurrentScreen('title')} />}
 
     </div>
   );
