@@ -8,6 +8,11 @@ class AudioService {
 
   private currentBgmSource: AudioBufferSourceNode | null = null;
   private currentBgmKey: string | null = null;
+  // BGM 一時停止用: 再生位置を記録する
+  private bgmPausedOffset: number = 0;   // 一時停止した位置（秒）
+  private bgmStartedAt:   number = 0;    // AudioContext での再生開始時刻
+  private bgmIsPaused:    boolean = false; // BGMが一時停止中かどうか
+
   private activeSESources: Set<AudioBufferSourceNode> = new Set();
 
   private buffers: Record<string, AudioBuffer> = {};
@@ -94,9 +99,9 @@ class AudioService {
   setBgmEnabled(on: boolean) {
     this.bgmEnabled = on;
     if (!on) {
-      this.stopBGM();
-    } else if (this.currentBgmKey) {
-      this.startBGM(this.currentBgmKey as 'title' | 'game');
+      this.pauseBGM(); // 位置を記憶して停止
+    } else {
+      this.resumeBGM(); // 続きから再生
     }
   }
 
@@ -113,29 +118,57 @@ class AudioService {
 
   getBgmEnabled(): boolean { return this.bgmEnabled; }
   getSeEnabled(): boolean  { return this.seEnabled; }
+  getBgmIsPaused(): boolean { return this.bgmIsPaused; }
 
   // --- BGM ---
 
   startBGM(mode: 'title' | 'game') {
     if (!this.bgmEnabled) return;
+
     if (!this.ctx || !this.isLoaded) {
       this.pendingBGM = mode;
       if (!this.isInitializing) this.init();
       return;
     }
 
-    // 同じBGMがすでに再生中なら何もしない
-    if (this.currentBgmKey === mode && this.currentBgmSource) return;
+    // 同じ曲が再生中なら何もしない
+    if (this.currentBgmKey === mode && this.currentBgmSource && !this.bgmIsPaused) return;
 
-    this.stopBGM();
+    // 新しい曲に切り替える場合は位置をリセット
+    if (this.currentBgmKey !== mode) {
+      this.stopBGM(); // 完全リセット
+    }
+
     this.currentBgmKey = mode;
-
     const bufferKey = mode === 'title' ? 'bgm_title' : 'bgm_game';
     const buffer = this.buffers[bufferKey];
     if (buffer) {
-      this._playBGMBuffer(buffer);
+      this._playBGMBuffer(buffer, 0); // 新曲は必ず最初から
     } else {
       console.log(`BGM not found: ${bufferKey}`);
+    }
+  }
+
+  pauseBGM() {
+    if (!this.currentBgmSource || !this.ctx || this.bgmIsPaused) return;
+    // 現在の再生位置を記録
+    const buffer = this.currentBgmSource.buffer;
+    if (buffer) {
+      const elapsed = this.ctx.currentTime - this.bgmStartedAt;
+      this.bgmPausedOffset = elapsed % buffer.duration;
+    }
+    try { this.currentBgmSource.stop(0); } catch (_) {}
+    try { this.currentBgmSource.disconnect(); } catch (_) {}
+    this.currentBgmSource = null;
+    this.bgmIsPaused = true;
+  }
+
+  resumeBGM() {
+    if (!this.bgmEnabled || !this.ctx || !this.bgmIsPaused || !this.currentBgmKey) return;
+    const bufferKey = this.currentBgmKey === 'title' ? 'bgm_title' : 'bgm_game';
+    const buffer = this.buffers[bufferKey];
+    if (buffer) {
+      this._playBGMBuffer(buffer, this.bgmPausedOffset);
     }
   }
 
@@ -145,13 +178,15 @@ class AudioService {
       try { this.currentBgmSource.disconnect(); } catch (_) {}
       this.currentBgmSource = null;
     }
-    this.currentBgmKey = null;
-    this.pendingBGM = null;
+    this.currentBgmKey    = null;
+    this.pendingBGM       = null;
+    this.bgmPausedOffset  = 0;
+    this.bgmStartedAt     = 0;
+    this.bgmIsPaused      = false;
   }
 
-  // BGM + 鳴っているSE をすべて即停止
   stopAll() {
-    this.stopBGM();
+    this.stopBGM(); // 完全停止・位置リセット
     this.activeSESources.forEach(src => {
       try { src.stop(0); } catch (_) {}
       try { src.disconnect(); } catch (_) {}
@@ -159,14 +194,16 @@ class AudioService {
     this.activeSESources.clear();
   }
 
-  private _playBGMBuffer(buffer: AudioBuffer) {
+  private _playBGMBuffer(buffer: AudioBuffer, offset: number = 0) {
     if (!this.ctx || !this.bgmGain) return;
     const source = this.ctx.createBufferSource();
     source.buffer = buffer;
     source.loop = true;
     source.connect(this.bgmGain);
-    source.start(0);
+    source.start(0, offset % buffer.duration); // ループ対応でdurationで割った余り
     this.currentBgmSource = source;
+    this.bgmStartedAt   = this.ctx.currentTime - offset % buffer.duration;
+    this.bgmIsPaused    = false;
   }
 
   // --- SE ---

@@ -1,15 +1,16 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { X } from 'lucide-react';
+import { X, Settings } from 'lucide-react';
 import { multiplayerService } from '../../services/multiplayerService';
 import { MultiPlayer } from '../../types';
 
 interface MatchingScreenProps {
   onGameStart: (roomId: string, players: MultiPlayer[]) => void;
   onBack: () => void;
+  onOpenSettings: () => void;
 }
 
-export const MatchingScreen: React.FC<MatchingScreenProps> = ({ onGameStart, onBack }) => {
+export const MatchingScreen: React.FC<MatchingScreenProps> = ({ onGameStart, onBack, onOpenSettings }) => {
   const [players, setPlayers] = useState<MultiPlayer[]>([]);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [roomId, setRoomId] = useState(multiplayerService.getRoomId());
@@ -76,7 +77,12 @@ export const MatchingScreen: React.FC<MatchingScreenProps> = ({ onGameStart, onB
             style={{ color: '#e040fb', textShadow: '0 0 12px #e040fb, 0 0 24px #7c4dff' }}>
           VS MULTI
         </h1>
-        <div className="w-8" /> {/* spacer */}
+        <button
+          onClick={onOpenSettings}
+          className="p-2 rounded-lg border border-gray-700 bg-gray-800/60 text-gray-400 hover:text-white hover:border-gray-500 active:scale-95 transition-all flex items-center gap-1"
+        >
+          <Settings size={16} />
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 pb-4 flex flex-col gap-4">
