@@ -1,0 +1,124 @@
+import React, { useMemo } from 'react';
+import { Grid, Position, TetrominoType } from '../types';
+import { COLOR_MAP, TETROMINOS } from '../constants';
+
+interface BoardProps {
+  grid: Grid;
+  activeShape: number[][];
+  position: Position;
+  activePiece: TetrominoType;
+  clearingRows: number[];
+  specialMessage: string | null;
+  ghostPosition: Position;
+  style?: React.CSSProperties; // Add style prop
+}
+
+const TetrisBoard: React.FC<BoardProps> = ({ 
+  grid, 
+  activeShape, 
+  position, 
+  activePiece,
+  clearingRows,
+  specialMessage,
+  ghostPosition,
+  style
+}) => {
+  // Merge active piece and ghost piece into grid for rendering (without locking)
+  const displayGrid = useMemo(() => {
+    // Clone grid
+    const display = grid.map(row => row.map(cell => ({ ...cell, isGhost: false })));
+
+    // Only draw active piece/ghost if we aren't currently clearing lines
+    if (clearingRows.length === 0) {
+      const color = TETROMINOS[activePiece].color;
+      
+      // 1. Draw Ghost Piece (Behind active)
+      // Since we want the active piece to potentially overlap the ghost if they are at the same position, draw ghost first.
+      for (let y = 0; y < activeShape.length; y++) {
+        for (let x = 0; x < activeShape[y].length; x++) {
+          if (activeShape[y][x]) {
+            const ny = ghostPosition.y + y;
+            const nx = ghostPosition.x + x;
+            if (ny >= 0 && ny < display.length && nx >= 0 && nx < display[0].length) {
+              // Only draw if cell is empty (should always be true for ghost validity)
+              if (!display[ny][nx].filled) {
+                 display[ny][nx] = { type: activePiece, filled: true, color: color, isGhost: true };
+              }
+            }
+          }
+        }
+      }
+
+      // 2. Draw Active Piece (Overwrites ghost if needed)
+      for (let y = 0; y < activeShape.length; y++) {
+        for (let x = 0; x < activeShape[y].length; x++) {
+          if (activeShape[y][x]) {
+            const ny = position.y + y;
+            const nx = position.x + x;
+            if (ny >= 0 && ny < display.length && nx >= 0 && nx < display[0].length) {
+              display[ny][nx] = { type: activePiece, filled: true, color: color, isGhost: false };
+            }
+          }
+        }
+      }
+    }
+    return display;
+  }, [grid, activeShape, position, activePiece, clearingRows, ghostPosition]);
+
+  return (
+    <div className="bg-gray-900 border-2 border-gray-700 p-1 rounded-lg shadow-[0_0_20px_rgba(0,0,0,0.5)] relative overflow-hidden shrink-0">
+      
+      {/* Special Message Overlay */}
+      {specialMessage && (
+        <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none p-2">
+          <div className="animate-bounce w-full">
+             <h1 className="text-3xl font-black italic text-transparent bg-clip-text bg-gradient-to-br from-yellow-300 via-yellow-500 to-red-500 drop-shadow-[0_0_15px_rgba(255,215,0,0.8)] stroke-white stroke-2 transform transition-all duration-300 whitespace-pre-wrap text-center leading-none">
+               {specialMessage}
+             </h1>
+          </div>
+          {/* Flash background */}
+          <div className="absolute inset-0 bg-white/20 animate-pulse -z-10"></div>
+        </div>
+      )}
+
+      <div 
+        className="grid grid-cols-10 gap-px bg-gray-800"
+        style={style || { width: 'min(60vw, 250px)', height: 'min(120vw, 500px)' }}
+      >
+        {displayGrid.map((row, y) => {
+          const isClearing = clearingRows.includes(y);
+          return row.map((cell, x) => {
+            const isGhost = (cell as any).isGhost;
+            return (
+              <div
+                key={`${y}-${x}`}
+                className={`w-full h-full rounded-[1px] transition-all duration-100 
+                  ${cell.filled && !isGhost ? '' : 'bg-gray-900/50'}
+                  ${isClearing ? 'bg-white scale-110 z-10 animate-pulse shadow-[0_0_10px_white]' : ''}
+                `}
+                style={{
+                  backgroundColor: isClearing 
+                    ? '#ffffff' 
+                    : (isGhost 
+                        ? `${COLOR_MAP[cell.color]}40` // 25% opacity for ghost
+                        : (cell.filled ? COLOR_MAP[cell.color] : undefined)),
+                  
+                  // Ghost specific border or standard shadow
+                  boxShadow: isClearing 
+                    ? '0 0 15px 5px rgba(255, 255, 255, 0.8)' 
+                    : (isGhost 
+                        ? `inset 0 0 0 1px ${COLOR_MAP[cell.color]}` 
+                        : (cell.filled ? `inset 0 0 5px rgba(0,0,0,0.2), 0 0 8px ${COLOR_MAP[cell.color]}80` : 'none')),
+                        
+                  opacity: isClearing ? 1 : (cell.filled ? 1 : 0.6)
+                }}
+              />
+            );
+          });
+        })}
+      </div>
+    </div>
+  );
+};
+
+export default TetrisBoard;

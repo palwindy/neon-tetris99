@@ -1,0 +1,5 @@
+{
+  "name": "Neon Tetris Mobile",
+  "description": "A high-performance Tetris clone optimized for Android with T-Spin mechanics, sound effects, and local score broadcasting.",
+  "requestFramePermissions": []
+}
