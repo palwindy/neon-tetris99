@@ -7,5 +7,6 @@ export default defineConfig({
   server: {
     host: true,
     port: 9000,
+    hmr: false,  // 外部ブラウザ接続時のHMR再接続ループを完全に無効化
   },
 });

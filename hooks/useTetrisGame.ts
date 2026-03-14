@@ -209,7 +209,6 @@ export const useTetrisGame = () => {
       setActiveShape(shape);
       setPosition(startPos);
       setRotationIndex(0);
-      setNextQueue(queue);
       setCanHold(true);
 
       // CRITICAL: Update Ref immediately so subsequent hardDrops/moves see the new piece
@@ -631,8 +630,7 @@ export const useTetrisGame = () => {
 
   const move = useCallback((dir: { x: number; y: number }, isAutoDrop = false) => {
     if (gameOver || paused || !gameStarted || isWinner || isClearingRef.current || isLockingRef.current) return;
-    
-    // Use Ref for current position to ensure atomic updates if inputs are fast
+
     const currentPos = gameStateRef.current.position;
     const currentShape = gameStateRef.current.activeShape;
     const currentGrid = gameStateRef.current.grid;
@@ -781,23 +779,25 @@ export const useTetrisGame = () => {
     moveRef.current = move;
   }, [move]);
 
-  useEffect(() => {
-    if (!gameStarted || paused || gameOver || isWinner || clearingRows.length > 0) return;
-    const speed = Math.max(50, Math.pow(0.85, level - 1) * TICK_RATE_BASE);
-    const tick = setInterval(() => {
-      if (isLockingRef.current) return;
-      const moved = moveRef.current({ x: 0, y: 1 }, true);
-      if (!moved) {
-        if (lockStartTimeRef.current === null) {
-          lockStartTimeRef.current = Date.now();
-        }
-      } else {
-        lockStartTimeRef.current = null;
-        hardDropLockedRef.current = false;
+useEffect(() => {
+  if (!gameStarted || paused || gameOver || isWinner || clearingRows.length > 0) return;
+  const speed = Math.max(50, Math.pow(0.85, level - 1) * TICK_RATE_BASE);
+  const tick = setInterval(() => {
+    if (isLockingRef.current) return;
+    const moved = moveRef.current({ x: 0, y: 1 }, true);
+    if (!moved) {
+      if (lockStartTimeRef.current === null) {
+        lockStartTimeRef.current = Date.now();
       }
-    }, speed);
-    return () => clearInterval(tick);
-  }, [gameStarted, paused, gameOver, isWinner, level, clearingRows.length]); 
+    } else {
+      lockStartTimeRef.current = null;
+      hardDropLockedRef.current = false;
+    }
+  }, speed);
+  return () => {
+    clearInterval(tick);
+  };
+}, [gameStarted, paused, gameOver, isWinner, level, clearingRows.length]);
 
   useEffect(() => {
     if (!gameStarted || paused || gameOver || isWinner || clearingRows.length > 0) return;

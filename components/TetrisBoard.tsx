@@ -62,6 +62,9 @@ const TetrisBoard: React.FC<BoardProps> = ({
         }
       }
     }
+    console.log('[BOARD] activeShape:', activeShape.length, 
+      'position:', position, 
+      'piece:', activePiece);
     return display;
   }, [grid, activeShape, position, activePiece, clearingRows, ghostPosition]);
 
@@ -82,8 +85,15 @@ const TetrisBoard: React.FC<BoardProps> = ({
       )}
 
       <div 
-        className="grid grid-cols-10 gap-px bg-gray-800"
-        style={style || { width: 'min(60vw, 250px)', height: 'min(120vw, 500px)' }}
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(10, 1fr)',
+          gridTemplateRows: 'repeat(20, 1fr)',
+          gap: '1px',
+          backgroundColor: '#374151',
+          width: style?.width ?? 'min(60vw, 250px)',
+          height: style?.height ?? 'min(120vw, 500px)',
+        }}
       >
         {displayGrid.map((row, y) => {
           const isClearing = clearingRows.includes(y);
@@ -92,25 +102,27 @@ const TetrisBoard: React.FC<BoardProps> = ({
             return (
               <div
                 key={`${y}-${x}`}
-                className={`w-full h-full rounded-[1px] transition-all duration-100 
-                  ${cell.filled && !isGhost ? '' : 'bg-gray-900/50'}
-                  ${isClearing ? 'bg-white scale-110 z-10 animate-pulse shadow-[0_0_10px_white]' : ''}
-                `}
                 style={{
-                  backgroundColor: isClearing 
-                    ? '#ffffff' 
-                    : (isGhost 
-                        ? `${COLOR_MAP[cell.color]}40` // 25% opacity for ghost
-                        : (cell.filled ? COLOR_MAP[cell.color] : undefined)),
-                  
-                  // Ghost specific border or standard shadow
-                  boxShadow: isClearing 
-                    ? '0 0 15px 5px rgba(255, 255, 255, 0.8)' 
-                    : (isGhost 
-                        ? `inset 0 0 0 1px ${COLOR_MAP[cell.color]}` 
-                        : (cell.filled ? `inset 0 0 5px rgba(0,0,0,0.2), 0 0 8px ${COLOR_MAP[cell.color]}80` : 'none')),
-                        
-                  opacity: isClearing ? 1 : (cell.filled ? 1 : 0.6)
+                  width: '100%',
+                  height: '100%',
+                  borderRadius: '1px',
+                  backgroundColor: isClearing
+                    ? '#ffffff'
+                    : isGhost
+                      ? `${COLOR_MAP[cell.color]}40`
+                      : cell.filled
+                        ? COLOR_MAP[cell.color]
+                        : '#111827',
+                  boxShadow: isClearing
+                    ? '0 0 15px 5px rgba(255,255,255,0.8)'
+                    : isGhost
+                      ? `inset 0 0 0 1px ${COLOR_MAP[cell.color]}`
+                      : cell.filled
+                        ? `inset 0 0 5px rgba(0,0,0,0.2), 0 0 8px ${COLOR_MAP[cell.color]}80`
+                        : 'none',
+                  opacity: isClearing ? 1 : cell.filled ? 1 : 0.7,
+                  transition: 'background-color 0.1s',
+                  animation: isClearing ? 'pulse 0.5s infinite' : 'none',
                 }}
               />
             );
