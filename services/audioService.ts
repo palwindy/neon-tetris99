@@ -76,6 +76,8 @@ class AudioService {
         this.pendingBGM = null;
         this.startBGM(pending);
       }
+    } catch (e) {
+      console.warn('Audio initialization failed or suspended', e);
     } finally {
       this.isInitializing = false;
     }
@@ -88,9 +90,25 @@ class AudioService {
         const response = await fetch(url);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const arrayBuffer = await response.arrayBuffer();
-        this.buffers[key] = await this.ctx!.decodeAudioData(arrayBuffer);
+        
+        // iOS Safari 旧API対応 (decodeAudioData がPromiseを返さない場合がある)
+        this.buffers[key] = await new Promise<AudioBuffer>((resolve, reject) => {
+          try {
+            const decodeResult = this.ctx!.decodeAudioData(
+              arrayBuffer,
+              (decoded) => resolve(decoded),
+              (e) => reject(e)
+            );
+            // decodeResult が Promise の場合は catch をチェーンする
+            if (decodeResult && typeof decodeResult.catch === 'function') {
+              decodeResult.catch(reject);
+            }
+          } catch (err) {
+            reject(err);
+          }
+        });
       } catch (e) {
-        console.warn(`Audio load skipped: ${key} (${url})`);
+        console.warn(`Audio load skipped: ${key} (${url})`, e);
       }
     });
     await Promise.all(promises);
