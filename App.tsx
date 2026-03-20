@@ -15,7 +15,7 @@ import SettingsModal from './components/ui/SettingsModal';
 import TitleScreen from './components/ui/TitleScreen';
 import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 
-const version = "1.23";
+const version = "1.24";
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('title');
