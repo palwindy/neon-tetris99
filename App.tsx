@@ -15,7 +15,7 @@ import SettingsModal from './components/ui/SettingsModal';
 import TitleScreen from './components/ui/TitleScreen';
 import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 
-const version = "1.20";
+const version = "1.21";
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('title');
@@ -24,6 +24,7 @@ function App() {
   const [bgmOn, setBgmOn]                 = useState(true);
   const [seOn,  setSeOn]                  = useState(true);
   const [blinkDuration, setBlinkDuration] = useState('2s');
+  const [hasInteracted, setHasInteracted] = useState(false);
 
   const {
     grid, activePiece, activeShape, position, ghostPosition,
@@ -48,7 +49,9 @@ function App() {
     if (currentScreen === 'matching') return;
 
     if (showTitle) {
-      audioService.startBGM('title');
+      if (hasInteracted) {
+        audioService.startBGM('title');
+      }
     } else if (gameStarted && !gameOver && !isWinner) {
       if (paused) {
         audioService.pauseBGM?.();
@@ -62,7 +65,7 @@ function App() {
     } else if (!gameOver && !isWinner) {
       audioService.stopBGM();
     }
-  }, [showTitle, currentScreen, gameStarted, paused, gameOver, isWinner]);
+  }, [showTitle, currentScreen, gameStarted, paused, gameOver, isWinner, hasInteracted]);
 
   // --- CPU blink ---
   useEffect(() => {
@@ -102,8 +105,21 @@ function App() {
     onResume: togglePause, onRetry: handleRetry, onQuitToTitle: handleQuitToTitle,
   };
 
+  const handleUserInteraction = () => {
+    if (!hasInteracted) {
+      setHasInteracted(true);
+      audioService.init();
+    }
+  };
+
   return (
-    <div className="h-[100dvh] bg-neutral-950 text-white overflow-hidden font-sans select-none touch-none">
+    <div 
+      className="h-[100dvh] bg-neutral-950 text-white overflow-hidden font-sans select-none touch-none"
+      onClick={handleUserInteraction}
+      onKeyDown={handleUserInteraction}
+      onTouchStart={handleUserInteraction}
+      tabIndex={0}
+    >
 
       {/* Portrait Layout */}
       <div className="w-full h-full flex flex-col items-center landscape:hidden">
