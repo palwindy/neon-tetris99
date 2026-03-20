@@ -43,14 +43,23 @@ class AudioService {
   async init(): Promise<void> {
     if (this.state === 'loading' || this.state === 'ready') return;
     this.state = 'loading';
+
+    // タイムアウト (8秒): Brave等でAudioContextがずっとsuspendedのままになるケースに対応
+    const initTimeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('AudioService init timeout')), 8000)
+    );
+
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioCtx) { this.state = 'error'; return; }
 
       this.ctx = new AudioCtx();
-      if (this.ctx.state === 'suspended') {
-        await this.ctx.resume().catch(() => {});
-      }
+
+      // resume() も3秒で打ち切る（Braveで永久待機しないように）
+      await Promise.race([
+        this.ctx.resume(),
+        new Promise<void>((_, rej) => setTimeout(rej, 3000)),
+      ]).catch(() => {});
 
       this.masterGain = this.ctx.createGain();
       this.masterGain.gain.value = 1.0;
@@ -64,7 +73,7 @@ class AudioService {
       this.seGain.gain.value = 0.8;
       this.seGain.connect(this.masterGain);
 
-      await this.loadAllAssets();
+      await Promise.race([this.loadAllAssets(), initTimeout]);
       this.state = 'ready';
 
       // ロード完了後に pending BGM があれば再生
@@ -74,7 +83,7 @@ class AudioService {
         this.startBGM(pending);
       }
     } catch (e) {
-      console.warn('[AudioService] init failed:', e);
+      console.warn('[AudioService] init failed or timed out:', e);
       this.state = 'error';
     }
   }
