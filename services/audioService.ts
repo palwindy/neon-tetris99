@@ -1,9 +1,9 @@
-// v1.24: スマホ安全版 AudioService
+// v1.26: SE先行ロード版 AudioService
 // ルール
-//   1. playSE / startBGM は初期化完了前なら黙ってスキップ（init()の再呼び出し禁止）
-//   2. 全ての非同期処理は try-catch で囲み、例外をゲームへ伝播させない
-//   3. decodeAudioData はコールバック・Promise 両方に対応した安全ラッパーで呼ぶ
-//   4. AudioContext の状態は常に確認してから操作する
+//   1. SE (小ファイル) を先にロードして即座に ready → SEはすぐ鳴る
+//   2. BGM (大ファイル) はバックグラウンドでロード → 完了次第再生
+//   3. playSE / startBGM は ready 前は黙ってスキップ（init()の再帰呼び出し禁止）
+//   4. 全操作を try-catch で囲み、例外をゲームへ伝播させない
 
 class AudioService {
   private ctx: AudioContext | null = null;
@@ -27,9 +27,8 @@ class AudioService {
   private state: 'idle' | 'loading' | 'ready' | 'error' = 'idle';
   private pendingBGM: 'title' | 'game' | null = null;
 
-  private readonly ASSETS: Record<string, string> = {
-    bgm_title:   '/assets/bgm_title.mp3',
-    bgm_game:    '/assets/bgm_game.mp3',
+  // SE (小ファイル): 先にロードして即座に ready にする
+  private readonly SE_ASSETS: Record<string, string> = {
     se_move:     '/assets/se_move.mp3',
     se_rotate:   '/assets/se_rotate.mp3',
     se_drop:     '/assets/se_drop.mp3',
@@ -37,6 +36,12 @@ class AudioService {
     se_clear:    '/assets/se_clear.mp3',
     se_tspin:    '/assets/se_tspin.mp3',
     se_gameover: '/assets/se_gameover.mp3',
+  };
+
+  // BGM (大ファイル): バックグラウンドでロード
+  private readonly BGM_ASSETS: Record<string, string> = {
+    bgm_title: '/assets/bgm_title.mp3',
+    bgm_game:  '/assets/bgm_game.mp3',
   };
 
   // ユーザー操作後に一度だけ呼ぶ
@@ -73,15 +78,13 @@ class AudioService {
       this.seGain.gain.value = 0.8;
       this.seGain.connect(this.masterGain);
 
-      await Promise.race([this.loadAllAssets(), initTimeout]);
+      // SE だけ先にロード → すぐ ready にする (BGMは小数秒後に使えればOK)
+      await Promise.race([this.loadAssets(this.SE_ASSETS), initTimeout]);
       this.state = 'ready';
 
-      // ロード完了後に pending BGM があれば再生
-      if (this.pendingBGM) {
-        const pending = this.pendingBGM;
-        this.pendingBGM = null;
-        this.startBGM(pending);
-      }
+      // BGM はバックグラウンドでロード（完了次第 pendingBGM を再生）
+      this.loadBgmAsync().catch(e => console.warn('[AudioService] BGM load failed:', e));
+
     } catch (e) {
       console.warn('[AudioService] init failed or timed out:', e);
       this.state = 'error';
@@ -108,9 +111,9 @@ class AudioService {
     });
   }
 
-  private async loadAllAssets(): Promise<void> {
+  private async loadAssets(assets: Record<string, string>): Promise<void> {
     if (!this.ctx) return;
-    const promises = Object.entries(this.ASSETS).map(async ([key, url]) => {
+    const promises = Object.entries(assets).map(async ([key, url]) => {
       try {
         const response = await fetch(url);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -121,6 +124,17 @@ class AudioService {
       }
     });
     await Promise.all(promises);
+  }
+
+  // BGM をバックグラウンドでロード（complete 後に pending があれば再生）
+  private async loadBgmAsync(): Promise<void> {
+    await this.loadAssets(this.BGM_ASSETS);
+    // ロード完了後に pending BGM があれば再生
+    if (this.pendingBGM && this.state === 'ready') {
+      const pending = this.pendingBGM;
+      this.pendingBGM = null;
+      this.startBGM(pending);
+    }
   }
 
   // --- 設定 ---
