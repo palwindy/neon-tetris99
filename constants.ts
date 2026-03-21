@@ -86,6 +86,8 @@ export const COLOR_MAP: Record<string, string> = {
   red: '#ef4444', // red-500
   gray: '#4b5563', // gray-600 (Garbage)
   ghost: 'rgba(255,255,255,0.2)',
+  'garbage-white': '#f3f4f6',
+  'garbage-gold': '#fbbf24',
 };
 
 // Full SRS Wall Kick Data (Tetris 99 / Guideline Compliant)

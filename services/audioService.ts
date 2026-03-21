@@ -318,6 +318,7 @@ class AudioService {
     if (lines === 4) this.playSE('se_tetris');
     else this.playSE('se_clear'); 
   }
+  playTSpin()                   { this.playSE('se_rotate'); }
   playAllClear()                { this.playSE('se_perfect'); }
 
   playWinStinger() {

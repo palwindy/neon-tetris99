@@ -65,8 +65,50 @@ export const useTetrisGame = ({
   
   const [clearingRows, setClearingRows] = useState<number[]>([]);
   const [specialMessage, setSpecialMessage] = useState<string | null>(null);
+  const [isFinishing, setIsFinishing] = useState(false);
+  const finishingRowRef = useRef<number>(-1);
+  const finishingTypeRef = useRef<'win' | 'lose'>('lose');
+  const finishingIntervalRef = useRef<number | null>(null);
   const isClearingRef = useRef(false);
   const isLockingRef = useRef(false);
+
+  const triggerFinishAnimation = useCallback((type: 'win' | 'lose') => {
+    if (gameStateRef.current.isWinner || gameStateRef.current.gameOver) return;
+    
+    setIsFinishing(true);
+    setGameStarted(false);
+    finishingTypeRef.current = type;
+    finishingRowRef.current = BOARD_HEIGHT - 1;
+
+    if (type === 'win') audioService.playWinStinger();
+    else audioService.playLossStinger();
+
+    if (finishingIntervalRef.current) clearInterval(finishingIntervalRef.current);
+    
+    finishingIntervalRef.current = window.setInterval(() => {
+      setGrid(prevGrid => {
+        const rowIdx = finishingRowRef.current;
+        if (rowIdx >= 0) {
+          const newGrid = prevGrid.map(row => row.map(cell => ({ ...cell })));
+          const color = finishingTypeRef.current === 'win' ? 'garbage-gold' : 'garbage-white';
+          for (let x = 0; x < BOARD_WIDTH; x++) {
+            newGrid[rowIdx][x] = { filled: true, type: 'G' as TetrominoType, color };
+          }
+          finishingRowRef.current--;
+          return newGrid;
+        } else {
+          if (finishingIntervalRef.current) {
+            clearInterval(finishingIntervalRef.current);
+            finishingIntervalRef.current = null;
+          }
+          if (finishingTypeRef.current === 'win') setIsWinner(true);
+          else setGameOver(true);
+          setIsFinishing(false);
+          return prevGrid;
+        }
+      });
+    }, 80);
+  }, [setIsWinner, setGameOver]);
 
   // T-Spin tracking
   const lastMoveWasRotate = useRef(false);
@@ -204,7 +246,7 @@ export const useTetrisGame = ({
     return { next, remainingQueue: newQueue };
   }, []);
 
-  const spawnPiece = (type: TetrominoType, queue: TetrominoType[], gridToCheck?: Grid) => {
+  const spawnPiece = useCallback((type: TetrominoType, queue: TetrominoType[], gridToCheck?: Grid) => {
     const shape = TETROMINOS[type].shape;
     const startPos = { x: Math.floor(BOARD_WIDTH / 2) - Math.floor(shape[0].length / 2), y: 0 };
 
@@ -215,9 +257,7 @@ export const useTetrisGame = ({
     const collisionGrid = gridToCheck || gameStateRef.current.grid;
 
     if (checkCollision(startPos, shape, collisionGrid)) {
-      setGameOver(true);
-      setGameStarted(false);
-      audioService.playGameOver();
+      triggerFinishAnimation('lose');
       isLockingRef.current = false; 
     } else {
       setActivePiece(type);
@@ -243,7 +283,7 @@ export const useTetrisGame = ({
       lastMoveWasRotate.current = false;
       lastKickIndex.current = 0;
     }
-  };
+  }, [triggerFinishAnimation]);
 
   const checkTSpin = (
     lockPos: Position, 
@@ -304,7 +344,7 @@ export const useTetrisGame = ({
     return { isTSpin: true, isMini };
   };
 
-  const lockPiece = (
+  const lockPiece = useCallback((
     currentPos: Position, 
     currentShape: number[][], 
     currentGrid: Grid, 
@@ -484,9 +524,7 @@ export const useTetrisGame = ({
 
             if (nextHealth <= 0) {
                 dead = true;
-                setIsWinner(true);
-                setGameStarted(false);
-                audioService.playTSpin(); 
+                triggerFinishAnimation('win');
             }
         }
 
@@ -553,12 +591,10 @@ export const useTetrisGame = ({
                 const pending = gameStateRef.current.pendingGarbage;
                 if (pending > 0 && (state.gameMode === 'CPU' || state.gameMode === 'MULTI')) {
                      const result = addGarbageToGrid(newGrid, pending);
-                     if (result.gameOver) {
-                         setGameOver(true);
-                         setGameStarted(false);
-                         audioService.playGameOver();
-                         return; // Stop here
-                     }
+                      if (result.gameOver) {
+                          triggerFinishAnimation('lose');
+                          return; // Stop here
+                      }
                      newGrid = result.grid;
                      setPendingGarbage(0);
                      gameStateRef.current.pendingGarbage = 0; // Sync ref
@@ -649,13 +685,11 @@ export const useTetrisGame = ({
         const pending = gameStateRef.current.pendingGarbage;
         if (pending > 0 && (mode === 'CPU' || mode === 'MULTI')) {
              const result = addGarbageToGrid(tempGrid, pending);
-             if (result.gameOver) {
-                 setGrid(result.grid);
-                 setGameOver(true);
-                 setGameStarted(false);
-                 audioService.playGameOver();
-                 return; // Stop
-             }
+              if (result.gameOver) {
+                  setGrid(result.grid);
+                  triggerFinishAnimation('lose');
+                  return; // Stop
+              }
              finalGrid = result.grid;
              setPendingGarbage(0);
              gameStateRef.current.pendingGarbage = 0; // Sync ref
@@ -684,19 +718,19 @@ export const useTetrisGame = ({
 
         isLockingRef.current = false;
     }
-  };
+  }, [audioService, getNextFromQueue, spawnPiece, triggerFinishAnimation, onAttackSent]);
 
   const ghostPosition = useMemo(() => {
-    if (!gameStarted || paused || gameOver || isClearingRef.current || activeShape.length === 0) return position;
+    if (!gameStarted || paused || gameOver || isWinner || isClearingRef.current || activeShape.length === 0 || isFinishing) return position; // Added isFinishing
     let ghostY = position.y;
     while (!checkCollision({ x: position.x, y: ghostY + 1 }, activeShape, grid) && ghostY < BOARD_HEIGHT) {
       ghostY++;
     }
     return { x: position.x, y: ghostY };
-  }, [position, activeShape, grid, gameStarted, paused, gameOver]);
+  }, [position, activeShape, grid, gameStarted, paused, gameOver, isWinner, isFinishing]); // Added isFinishing
 
   const move = useCallback((dir: { x: number; y: number }, isAutoDrop = false) => {
-    if (gameOver || paused || !gameStarted || isWinner || isClearingRef.current || isLockingRef.current) return;
+    if (gameOver || paused || !gameStarted || isWinner || isClearingRef.current || isLockingRef.current || isFinishing) return false; // Added isFinishing
 
     const currentPos = gameStateRef.current.position;
     const currentShape = gameStateRef.current.activeShape;
@@ -717,10 +751,10 @@ export const useTetrisGame = ({
       return true;
     }
     return false;
-  }, [gameOver, paused, gameStarted, isWinner]);
+  }, [gameOver, paused, gameStarted, isWinner, isFinishing, audioService]); // Added isFinishing
 
   const hardDrop = useCallback(() => {
-    if (gameOver || paused || !gameStarted || isWinner || isClearingRef.current || isLockingRef.current) return;
+    if (gameOver || paused || !gameStarted || isWinner || isClearingRef.current || isLockingRef.current || isFinishing) return; // Added isFinishing
     if (hardDropLockedRef.current) return;
     
     // CRITICAL: Use Ref data to avoid stale closures during rapid fire

@@ -110,16 +110,24 @@ const TetrisBoard: React.FC<BoardProps> = ({
                     ? '#ffffff'
                     : isGhost
                       ? `${COLOR_MAP[cell.color]}40`
-                      : cell.filled
-                        ? COLOR_MAP[cell.color]
-                        : '#111827',
+                      : cell.color === 'garbage-gold'
+                        ? '#fbbf24'
+                        : cell.color === 'garbage-white'
+                          ? '#f3f4f6'
+                          : cell.filled
+                            ? COLOR_MAP[cell.color]
+                            : '#111827',
                   boxShadow: isClearing
                     ? '0 0 15px 5px rgba(255,255,255,0.8)'
                     : isGhost
                       ? `inset 0 0 0 1px ${COLOR_MAP[cell.color]}`
-                      : cell.filled
-                        ? `inset 0 0 5px rgba(0,0,0,0.2), 0 0 8px ${COLOR_MAP[cell.color]}80`
-                        : 'none',
+                      : cell.color === 'garbage-gold'
+                        ? 'inset 0 0 10px rgba(0,0,0,0.3), 0 0 15px rgba(251,191,36,0.6)'
+                        : cell.color === 'garbage-white'
+                          ? 'inset 0 0 10px rgba(0,0,0,0.3), 0 0 10px rgba(255,255,255,0.4)'
+                          : cell.filled
+                            ? `inset 0 0 5px rgba(0,0,0,0.2), 0 0 8px ${COLOR_MAP[cell.color]}80`
+                            : 'none',
                   opacity: isClearing ? 1 : cell.filled ? 1 : 0.7,
                   transition: 'background-color 0.1s',
                   animation: isClearing ? 'pulse 0.5s infinite' : 'none',
