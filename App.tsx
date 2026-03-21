@@ -16,7 +16,7 @@ import TitleScreen from './components/ui/TitleScreen';
 import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 import SplashScreen from './components/ui/SplashScreen';
 
-const version = "1.29";
+const version = "1.30";
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('title');
@@ -114,8 +114,17 @@ function App() {
     onResume: togglePause, onRetry: handleRetry, onQuitToTitle: handleQuitToTitle,
   };
 
+  // 初回タップ時などにAutoplay制約で止まっていた音声を復帰させる
+  const handleGlobalInteraction = () => {
+    audioService.tryResumeContext();
+  };
+
   return (
-    <div className="h-[100dvh] bg-neutral-950 text-white overflow-hidden font-sans select-none touch-none">
+    <div 
+      className="h-[100dvh] bg-neutral-950 text-white overflow-hidden font-sans select-none touch-none"
+      onClick={handleGlobalInteraction}
+      onTouchStart={handleGlobalInteraction}
+    >
 
       {/* スプラッシュ画面 */}
       {showSplash && (

@@ -225,6 +225,13 @@ class AudioService {
     this.bgmIsPaused     = false;
   }
 
+  // 自動化によってAutoplayブロックされた場合、ユーザーの初回タッチ時に外部からこれを呼んで復帰させる
+  tryResumeContext() {
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
+  }
+
   stopAll() {
     this.stopBGM();
     this.activeSESources.forEach(src => {

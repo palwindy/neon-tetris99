@@ -55,7 +55,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onStart, complete, onDone }
       </div>
 
       {/* 状態テキスト */}
-      <div className="absolute bottom-12 right-8 text-right">
+      <div className="absolute bottom-12 right-16 text-right">
         <LoadingDots />
       </div>
     </div>
