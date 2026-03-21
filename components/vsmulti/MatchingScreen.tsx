@@ -74,7 +74,11 @@ export const MatchingScreen: React.FC<MatchingScreenProps> = ({ onGameStart, onB
       }}
     >
       <div className="flex items-center justify-between px-4 py-3 shrink-0">
-        <button onClick={onBack} className="text-gray-400 hover:text-white p-1">
+        <button 
+          onClick={onBack} 
+          disabled={countdown !== null}
+          className={`p-1 transition-all ${countdown !== null ? 'opacity-0 scale-90 pointer-events-none' : 'text-gray-400 hover:text-white'}`}
+        >
           <X size={24} />
         </button>
         <h1 className="text-xl font-black tracking-widest"
@@ -169,9 +173,9 @@ export const MatchingScreen: React.FC<MatchingScreenProps> = ({ onGameStart, onB
               className="flex-1 bg-black/60 border border-gray-600 rounded-lg px-3 py-2 text-white text-center text-xl tracking-[0.3em] font-bold focus:border-purple-400 outline-none"
             />
             <button
-              disabled={inputRoomId.length !== 4}
+              disabled={inputRoomId.length !== 4 || countdown !== null}
               onClick={() => handleJoinRoom(inputRoomId)}
-              className={`px-4 py-2 rounded-lg font-bold text-sm tracking-wide transition-all ${inputRoomId.length === 4 ? 'bg-cyan-600 hover:bg-cyan-500 text-white' : 'bg-gray-800 text-gray-600 cursor-not-allowed'}`}>
+              className={`px-4 py-2 rounded-lg font-bold text-sm tracking-wide transition-all ${inputRoomId.length === 4 && countdown === null ? 'bg-cyan-600 hover:bg-cyan-500 text-white' : 'bg-gray-800 text-gray-600 cursor-not-allowed'}`}>
               参加
             </button>
           </div>
