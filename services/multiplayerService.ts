@@ -66,6 +66,7 @@ class MultiplayerService {
   }
 
   private notify(players: MultiPlayer[]) {
+    console.log("[MultiplayerService] notify players:", players);
     this.currentPlayers = players;
     this.listeners.forEach(cb => cb(players));
   }
@@ -121,6 +122,7 @@ class MultiplayerService {
 
   updateStatus(status: MultiPlayerStatus) {
     if (!this.roomId) return;
+    console.log(`[MultiplayerService] updateStatus: ${status} for roomId: ${this.roomId}`);
     const playerRef = ref(db, `rooms/${this.roomId}/players/${this.playerId}`);
     update(playerRef, { status });
   }

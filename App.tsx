@@ -17,7 +17,7 @@ import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 import SplashScreen from './components/ui/SplashScreen';
 import { multiplayerService } from './services/multiplayerService';
 
-const version = "1.41";
+const version = "1.42";
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('title');
@@ -133,18 +133,25 @@ function App() {
     return () => clearInterval(id);
   }, [nextAttackTime, gameStarted, gameMode, paused, isWinner]);
 
-  // --- Multiplayer Logic ---
   useEffect(() => {
     if (gameMode !== 'MULTI' || !gameStarted) return;
 
     // 自分が負けた場合
     if (gameOver) {
+      console.log(`[App] Game Over detected in MULTI mode. Updating status to defeated.`);
       multiplayerService.updateStatus('defeated');
     }
 
     // 相手が負けた場合
-    const opponent = multiPlayers.find(p => p.id !== multiplayerService.getPlayerId());
+    const myId = multiplayerService.getPlayerId();
+    const opponent = multiPlayers.find(p => p.id !== myId);
+    
+    if (multiPlayers.length > 1) {
+      console.log(`[App] MultiPlay Status: Me=${myId}, Opponent=${opponent?.id}, OppStatus=${opponent?.status}`);
+    }
+
     if (opponent && opponent.status === 'defeated' && !gameOver && !isWinner) {
+      console.log(`[App] Opponent ${opponent.id} defeated. Setting isWinner to true.`);
       setIsWinner(true);
     }
   }, [multiPlayers, gameOver, isWinner, gameStarted, gameMode, setIsWinner]);
