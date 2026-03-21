@@ -16,7 +16,7 @@ import TitleScreen from './components/ui/TitleScreen';
 import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 import SplashScreen from './components/ui/SplashScreen';
 
-const version = "1.33";
+const version = "1.34";
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('title');
@@ -56,6 +56,8 @@ function App() {
 
   useEffect(() => {
     if (currentScreen === 'matching') return;
+
+    console.log(`[App] AudioEffect showTitle=${showTitle} showSplash=${showSplash} audioReady=${audioReady} gameStarted=${gameStarted}`);
 
     if (showTitle) {
       if (!showSplash && audioReady) {
