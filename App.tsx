@@ -16,7 +16,7 @@ import TitleScreen from './components/ui/TitleScreen';
 import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 import SplashScreen from './components/ui/SplashScreen';
 
-const version = "1.37";
+const version = "1.38";
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('title');
@@ -98,6 +98,43 @@ function App() {
       return () => clearTimeout(timer);
     }
   }, [audioReady, showSplash]);
+
+  // --- Page Visibility / Focus ---
+  useEffect(() => {
+    const handleInactivate = () => {
+      // BGM一時停止
+      audioService.pauseBGM();
+      // ゲーム中なら自動ポーズに移行
+      if (currentScreen === 'game' && gameStarted && !gameOver && !isWinner && !paused) {
+        setPaused(true);
+      }
+    };
+
+    const handleActivate = () => {
+      // 復帰時にBGMをレジューム (タイトル画面またはゲーム継続中)
+      if (showTitle || (currentScreen === 'game' && !paused)) {
+        audioService.resumeBGM();
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        handleInactivate();
+      } else {
+        handleActivate();
+      }
+    };
+
+    window.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleInactivate);
+    window.addEventListener('focus', handleActivate);
+
+    return () => {
+      window.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleInactivate);
+      window.removeEventListener('focus', handleActivate);
+    };
+  }, [currentScreen, gameStarted, gameOver, isWinner, paused, showTitle]);
 
   // --- CPU blink ---
   useEffect(() => {
