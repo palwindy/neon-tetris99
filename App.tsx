@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useTetrisGame } from './hooks/useTetrisGame';
 import { useGameInput } from './hooks/useGameInput';
 import TetrisBoard from './components/TetrisBoard';
@@ -16,7 +16,7 @@ import TitleScreen from './components/ui/TitleScreen';
 import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 import SplashScreen from './components/ui/SplashScreen';
 
-const version = "1.34";
+const version = "1.35";
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('title');
@@ -50,17 +50,23 @@ function App() {
   const handleSeToggle  = (on: boolean) => { setSeOn(on);  audioService.setSeEnabled(on);  };
 
   useEffect(() => {
-    // 起動時に audioService にロード完了コールバックを設定
     audioService.setOnReady(() => setAudioReady(true));
+  }, []);
+
+  // スプラッシュ終了時の処理
+  const handleSplashDone = useCallback(() => {
+    setShowSplash(false);
+  }, []);
+
+  const handleAudioInit = useCallback(() => {
+    audioService.init();
   }, []);
 
   useEffect(() => {
     if (currentScreen === 'matching') return;
 
-    console.log(`[App] AudioEffect showTitle=${showTitle} showSplash=${showSplash} audioReady=${audioReady} gameStarted=${gameStarted}`);
-
     if (showTitle) {
-      if (!showSplash && audioReady) {
+      if (audioReady) {
         audioService.startBGM('title');
       }
     } else if (gameStarted && !gameOver && !isWinner) {
@@ -128,17 +134,17 @@ function App() {
       onTouchStart={handleGlobalInteraction}
     >
 
-      {/* スプラッシュ画面 */}
       {showSplash && (
         <SplashScreen 
-          onStart={() => audioService.init()} 
+          onStart={handleAudioInit} 
           complete={audioReady} 
-          onDone={() => setShowSplash(false)} 
+          onDone={handleSplashDone} 
         />
       )}
 
-      {/* Portrait Layout — z-0 でTitleScreen(z-100)より後ろに確実に置く */}
-      <div className="w-full h-full flex flex-col items-center landscape:hidden relative z-0">
+      {/* Portrait Layout */}
+      {!showSplash && (
+        <div className="w-full h-full flex flex-col items-center landscape:hidden relative z-0">
         <div className="w-full max-w-lg px-4 py-1 flex justify-between items-center bg-neutral-900 border-b border-neutral-800 z-10 shrink-0 h-10">
           <div className="flex items-baseline">
             <h1 className="text-sm font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">NEON 99</h1>
@@ -193,8 +199,9 @@ function App() {
         </div>
       </div>
 
-      {/* Landscape Layout — z-0 で確実に管理 */}
-      <div className="hidden landscape:flex w-full h-full flex-row overflow-hidden relative z-0">
+      {/* Landscape Layout */}
+      {!showSplash && (
+        <div className="hidden landscape:flex w-full h-full flex-row overflow-hidden relative z-0">
         <div className="flex-1 flex flex-col items-center justify-between pb-1 pt-2 gap-2 bg-gray-900/20 border-r border-gray-800/50 min-w-0">
           <div className="mt-2 flex items-baseline">
             <h1 className="text-xs font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">NEON 99</h1>
@@ -260,7 +267,7 @@ function App() {
       )}
 
       {/* Title Screen */}
-      {showTitle && (
+      {showTitle && !showSplash && (
         <TitleScreen
           version={version}
           onStartSingle={() => handleStartGame('SINGLE')}

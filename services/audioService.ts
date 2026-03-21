@@ -37,9 +37,9 @@ class AudioService {
     se_lock:     '/assets/se_lock.ogg?v=1.34',
     se_clear:    '/assets/se_clear.ogg?v=1.34',
     se_tspin:    '/assets/se_tspin.ogg?v=1.34',
-    se_gameover: '/assets/se_gameover.ogg?v=1.34',
-    bgm_title:   '/assets/bgm_game.ogg?v=1.34', // ★テスト: game用をtitleにも使う
-    bgm_game:    '/assets/bgm_game.ogg?v=1.34',
+    se_gameover: '/assets/se_gameover.ogg?v=1.35',
+    bgm_title:   '/assets/bgm_title.ogg?v=1.35',
+    bgm_game:    '/assets/bgm_game.ogg?v=1.35',
   };
 
   /** ロード完了時に呼ぶコールバックを登録する */
@@ -173,23 +173,17 @@ class AudioService {
 
   // --- BGM ---
   startBGM(mode: 'title' | 'game') {
-    console.log(`[AudioService] startBGM(${mode}) state=${this.state} bgmEnabled=${this.bgmEnabled}`);
     if (!this.bgmEnabled) return;
     if (this.state !== 'ready') { 
-      console.log(`[AudioService] skip startBGM: state=${this.state}`);
       this.pendingBGM = mode; 
       return; 
     }
-    if (this.currentBgmKey === mode && this.currentBgmSource && !this.bgmIsPaused) {
-      console.log(`[AudioService] already playing ${mode}`);
-      return;
-    }
+    if (this.currentBgmKey === mode && this.currentBgmSource && !this.bgmIsPaused) return;
     if (this.currentBgmKey !== mode) this.stopBGM();
     this.currentBgmKey = mode;
     const bufferKey = mode === 'title' ? 'bgm_title' : 'bgm_game';
     const buffer = this.buffers[bufferKey];
     if (buffer) {
-      console.log(`[AudioService] buffer found for ${bufferKey}, playing...`);
       this._playBGMBuffer(buffer, 0);
     } else {
       console.warn('[AudioService] BGM buffer not found:', bufferKey);
@@ -249,7 +243,6 @@ class AudioService {
 
   private _playBGMBuffer(buffer: AudioBuffer, offset: number = 0) {
     if (!this.ctx || !this.bgmGain) return;
-    console.log(`[AudioService] _playBGMBuffer ctx.state=${this.ctx.state} offset=${offset}`);
     try {
       if (this.ctx.state === 'suspended') {
         this.ctx.resume().catch(() => {});
