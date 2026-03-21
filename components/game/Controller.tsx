@@ -46,10 +46,10 @@ export const ActionButtons: React.FC<ActionButtonsProps> = React.memo(({ hold, r
   const btnBase = "rounded-full border-b-4 active:border-b-0 active:translate-y-0.5 shadow-md flex flex-col items-center justify-center touch-none select-none";
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(14px, 4vw, 24px)', marginBottom: 'clamp(10px, 3vw, 20px)' }}>
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 'clamp(14px, 4vw, 24px)', marginBottom: 'clamp(10px, 3vw, 20px)' }}>
 
       {/* 左カラム: HOLD（上）→ CCW（下） */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'clamp(6px, 1.5vw, 10px)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'clamp(40px, 10vw, 80px)' }}>
         <ControlButton onClick={hold} cooldown={200}
           className={`${btnBase} border-gray-700 bg-gray-600 text-gray-200`}
           style={{ width: sSmall, height: sSmall }}>
