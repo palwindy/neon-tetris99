@@ -112,7 +112,7 @@ export const useTetrisGame = ({
         }
       });
     }, 80);
-  }, [setIsWinner, setGameOver]);
+  }, [onFinishingStarted, gameMode, setIsWinner, setGameOver]);
 
   // T-Spin tracking
   const lastMoveWasRotate = useRef(false);
@@ -287,7 +287,7 @@ export const useTetrisGame = ({
       lastMoveWasRotate.current = false;
       lastKickIndex.current = 0;
     }
-  }, [triggerFinishAnimation]);
+  }, [getTetrominoBag, triggerFinishAnimation]);
 
   const checkTSpin = (
     lockPos: Position, 
@@ -722,7 +722,7 @@ export const useTetrisGame = ({
 
         isLockingRef.current = false;
     }
-  }, [audioService, getNextFromQueue, spawnPiece, triggerFinishAnimation, onAttackSent]);
+  }, [audioService, getNextFromQueue, spawnPiece, triggerFinishAnimation, onAttackSent, onLineClear, onTSpin]);
 
   const ghostPosition = useMemo(() => {
     if (!gameStarted || paused || gameOver || isWinner || isClearingRef.current || activeShape.length === 0 || isFinishing) return position; // Added isFinishing
@@ -755,7 +755,7 @@ export const useTetrisGame = ({
       return true;
     }
     return false;
-  }, [gameOver, paused, gameStarted, isWinner, isFinishing, audioService]); // Added isFinishing
+  }, [gameOver, paused, gameStarted, isWinner, isFinishing, audioService, setPosition]);
 
   const hardDrop = useCallback(() => {
     if (gameOver || paused || !gameStarted || isWinner || isClearingRef.current || isLockingRef.current || isFinishing) return; // Added isFinishing
