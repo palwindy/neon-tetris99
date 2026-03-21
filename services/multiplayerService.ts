@@ -1,129 +1,136 @@
+import { MultiPlayer, MultiPlayerStatus } from '../types';
+import { db } from '../firebase';
+import { 
+  ref, 
+  onValue, 
+  set, 
+  update, 
+  onDisconnect, 
+  remove, 
+  serverTimestamp, 
+  get,
+  Unsubscribe
+} from 'firebase/database';
 
-// services/multiplayerService.ts
-import { MultiPlayer } from '../types';
-
-const CHANNEL_NAME = 'neon-tetris-multi';
 const STORAGE_KEY = 'neon-tetris-room';
-const HEARTBEAT_INTERVAL = 1500; // ms
-const PLAYER_TIMEOUT = 4000; // ms
 
 export type RoomEventCallback = (players: MultiPlayer[]) => void;
 
 class MultiplayerService {
-  private channel: BroadcastChannel;
   private playerId: string;
   private playerName: string;
-  private roomId: string;
-  private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+  private roomId: string = '';
   private onPlayersChange: RoomEventCallback | null = null;
-  private players: Map<string, { player: MultiPlayer; lastSeen: number }> = new Map();
+  private unsubscribe: Unsubscribe | null = null;
 
   constructor() {
-    this.channel = new BroadcastChannel(CHANNEL_NAME);
-    this.playerId = `player_${Math.random().toString(36).slice(2, 8)}`;
-    this.playerName = `Player_${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-    this.roomId = this.detectRoomId();
-    this.channel.onmessage = this.handleMessage.bind(this);
-    window.addEventListener('storage', this.handleStorage.bind(this));
+    this.playerId = this.getOrCreatePlayerId();
+    this.playerName = this.getOrCreatePlayerName();
   }
 
-  private detectRoomId(): string {
+  private getOrCreatePlayerId(): string {
+    let id = localStorage.getItem(`${STORAGE_KEY}_playerId`);
+    if (!id) {
+      id = `p_${Math.random().toString(36).slice(2, 8)}`;
+      localStorage.setItem(`${STORAGE_KEY}_playerId`, id);
+    }
+    return id;
+  }
+
+  private getOrCreatePlayerName(): string {
+    let name = localStorage.getItem(`${STORAGE_KEY}_playerName`);
+    if (!name) {
+      name = `Player_${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+      localStorage.setItem(`${STORAGE_KEY}_playerName`, name);
+    }
+    return name;
+  }
+
+  getRoomId() {
     const stored = localStorage.getItem(`${STORAGE_KEY}_roomId`);
     if (stored && /^\d{4}$/.test(stored)) return stored;
-    const newId = String(Math.floor(1000 + Math.random() * 9000)); // 1000〜9999
-    localStorage.setItem(`${STORAGE_KEY}_roomId`, newId);
-    return newId;
+    return String(Math.floor(1000 + Math.random() * 9000));
   }
 
-  joinRoom(roomId: string, onPlayersChange: RoomEventCallback) {
-    this.roomId = roomId;
-    this.onPlayersChange = onPlayersChange;
-    localStorage.setItem(`${STORAGE_KEY}_roomId`, roomId);
-    this.startHeartbeat();
-    this.broadcast('JOIN');
-  }
-
-  setReady() {
-    this.broadcast('READY');
-  }
-
-  leaveRoom() {
-    this.broadcast('LEAVE');
-    this.stopHeartbeat();
-    this.players.clear();
-    localStorage.removeItem(`${STORAGE_KEY}_roomId`);
-  }
-
-  getRoomId() { return this.roomId; }
   getPlayerId() { return this.playerId; }
   getPlayerName() { return this.playerName; }
 
-  private broadcast(type: 'JOIN' | 'HEARTBEAT' | 'READY' | 'LEAVE') {
-    const payload = {
-      type,
-      roomId: this.roomId,
-      player: {
-        id: this.playerId,
-        name: this.playerName,
-        status: type === 'READY' ? 'ready' : (type === 'LEAVE' ? 'searching' : 'found'),
-        isHost: false,
-      } as MultiPlayer,
-    };
-    this.channel.postMessage(payload);
-    localStorage.setItem(`${STORAGE_KEY}_${this.playerId}`, JSON.stringify({ ...payload, ts: Date.now() }));
-  }
+  async joinRoom(roomId: string, onPlayersChange: RoomEventCallback) {
+    this.roomId = roomId;
+    this.onPlayersChange = onPlayersChange;
+    localStorage.setItem(`${STORAGE_KEY}_roomId`, roomId);
 
-  private handleMessage(event: MessageEvent) {
-    this.processEvent(event.data);
-  }
+    const playerRef = ref(db, `rooms/${roomId}/players/${this.playerId}`);
+    const roomPlayersRef = ref(db, `rooms/${roomId}/players`);
 
-  private handleStorage(event: StorageEvent) {
-    if (event.key?.startsWith(`${STORAGE_KEY}_player_`)) {
-      try {
-        const data = JSON.parse(event.newValue || '');
-        this.processEvent(data);
-      } catch {}
-    }
-  }
-
-  private processEvent(data: any) {
-    if (!data || data.roomId !== this.roomId || data.player.id === this.playerId) return;
-    if (data.type === 'LEAVE') {
-      this.players.delete(data.player.id);
-    } else {
-      this.players.set(data.player.id, { player: data.player, lastSeen: Date.now() });
-    }
-    this.cleanupStale();
-    this.onPlayersChange?.(this.getAllPlayers());
-  }
-
-  private cleanupStale() {
-    const now = Date.now();
-    for (const [id, { lastSeen }] of this.players) {
-      if (now - lastSeen > PLAYER_TIMEOUT) this.players.delete(id);
-    }
-  }
-
-  getAllPlayers(): MultiPlayer[] {
-    const self: MultiPlayer = {
+    // 自分の情報を登録
+    const initialData: MultiPlayer = {
       id: this.playerId,
       name: this.playerName,
       status: 'found',
-      isHost: this.players.size === 0,
+      isHost: false // 最初の参加者が後で判定
     };
-    return [self, ...Array.from(this.players.values()).map(v => v.player)];
+
+    // 切断時に自動削除
+    onDisconnect(playerRef).remove();
+
+    // 部屋の状態を監視
+    if (this.unsubscribe) this.unsubscribe();
+    this.unsubscribe = onValue(roomPlayersRef, (snapshot) => {
+      const data = snapshot.val();
+      if (!data) {
+        // 自分が最初のプレイヤー
+        set(playerRef, { ...initialData, isHost: true });
+        this.onPlayersChange?.([{ ...initialData, isHost: true }]);
+        return;
+      }
+
+      const playersObj = data as Record<string, MultiPlayer>;
+      const playersList = Object.values(playersObj);
+      
+      // ホスト不在チェック (誰かがホストであるべき)
+      const hasHost = playersList.some(p => p.isHost);
+      if (!hasHost) {
+        // 最古のプレイヤー（または自分）をホストにする簡易ロジック
+        // ここでは自分しかいなければ自分をホストにする
+        const isMeOnly = playersList.length === 1 && playersList[0].id === this.playerId;
+        if (isMeOnly) {
+          update(playerRef, { isHost: true });
+        }
+      }
+
+      // 自分がリストにいなければ追加
+      if (!playersObj[this.playerId]) {
+        set(playerRef, initialData);
+      }
+
+      this.onPlayersChange?.(playersList);
+    });
   }
 
-  private startHeartbeat() {
-    this.heartbeatTimer = setInterval(() => {
-      this.broadcast('HEARTBEAT');
-      this.cleanupStale();
-      this.onPlayersChange?.(this.getAllPlayers());
-    }, HEARTBEAT_INTERVAL);
+  setReady() {
+    if (!this.roomId) return;
+    const playerRef = ref(db, `rooms/${this.roomId}/players/${this.playerId}`);
+    update(playerRef, { status: 'ready' as MultiPlayerStatus });
   }
 
-  private stopHeartbeat() {
-    if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
+  async leaveRoom() {
+    if (this.unsubscribe) {
+      this.unsubscribe();
+      this.unsubscribe = null;
+    }
+    if (this.roomId) {
+      const playerRef = ref(db, `rooms/${this.roomId}/players/${this.playerId}`);
+      await remove(playerRef);
+      // もし自分が最後のプレイヤーなら部屋ごと消す（任意）
+      const roomPlayersRef = ref(db, `rooms/${this.roomId}/players`);
+      const snapshot = await get(roomPlayersRef);
+      if (!snapshot.exists()) {
+        await remove(ref(db, `rooms/${this.roomId}`));
+      }
+    }
+    this.roomId = '';
+    this.onPlayersChange = null;
   }
 }
 
