@@ -16,7 +16,7 @@ import TitleScreen from './components/ui/TitleScreen';
 import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 import SplashScreen from './components/ui/SplashScreen';
 
-const version = "1.31";
+const version = "1.32";
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('title');
