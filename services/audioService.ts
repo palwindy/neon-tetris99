@@ -178,7 +178,8 @@ class AudioService {
     if (this.currentBgmKey === mode && this.currentBgmSource && !this.bgmIsPaused) return;
     if (this.currentBgmKey !== mode) this.stopBGM();
     this.currentBgmKey = mode;
-    const bufferKey = mode === 'title' ? 'bgm_title' : 'bgm_game';
+    // 【切り分けテスト】title 要求時も bgm_game のバッファを再生する
+    const bufferKey = mode === 'title' ? 'bgm_game' : 'bgm_game';
     const buffer = this.buffers[bufferKey];
     if (buffer) {
       this._playBGMBuffer(buffer, 0);
