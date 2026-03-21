@@ -29,19 +29,19 @@ class AudioService {
 
   // SE (小ファイル): 先にロードして即座に ready にする
   private readonly SE_ASSETS: Record<string, string> = {
-    se_move:     '/assets/se_move.mp3',
-    se_rotate:   '/assets/se_rotate.mp3',
-    se_drop:     '/assets/se_drop.mp3',
-    se_lock:     '/assets/se_lock.mp3',
-    se_clear:    '/assets/se_clear.mp3',
-    se_tspin:    '/assets/se_tspin.mp3',
-    se_gameover: '/assets/se_gameover.mp3',
+    se_move: '/assets/se_move.ogg',
+    se_rotate: '/assets/se_rotate.ogg',
+    se_drop: '/assets/se_drop.ogg',
+    se_lock: '/assets/se_lock.ogg',
+    se_clear: '/assets/se_clear.ogg',
+    se_tspin: '/assets/se_tspin.ogg',
+    se_gameover: '/assets/se_gameover.ogg',
   };
 
   // BGM (大ファイル): バックグラウンドでロード
   private readonly BGM_ASSETS: Record<string, string> = {
-    bgm_title: '/assets/bgm_title.mp3',
-    bgm_game:  '/assets/bgm_game.mp3',
+    bgm_title: '/assets/bgm_title.ogg',
+    bgm_game: '/assets/bgm_game.ogg',
   };
 
   // ユーザー操作後に一度だけ呼ぶ
@@ -64,7 +64,7 @@ class AudioService {
       await Promise.race([
         this.ctx.resume(),
         new Promise<void>((_, rej) => setTimeout(rej, 3000)),
-      ]).catch(() => {});
+      ]).catch(() => { });
 
       this.masterGain = this.ctx.createGain();
       this.masterGain.gain.value = 1.0;
@@ -146,14 +146,14 @@ class AudioService {
     this.seEnabled = on;
     if (!on) {
       this.activeSESources.forEach(src => {
-        try { src.stop(0); } catch (_) {}
-        try { src.disconnect(); } catch (_) {}
+        try { src.stop(0); } catch (_) { }
+        try { src.disconnect(); } catch (_) { }
       });
       this.activeSESources.clear();
     }
   }
-  getBgmEnabled(): boolean  { return this.bgmEnabled; }
-  getSeEnabled(): boolean   { return this.seEnabled; }
+  getBgmEnabled(): boolean { return this.bgmEnabled; }
+  getSeEnabled(): boolean { return this.seEnabled; }
   getBgmIsPaused(): boolean { return this.bgmIsPaused; }
 
   // --- BGM ---
@@ -186,7 +186,7 @@ class AudioService {
       }
       this.currentBgmSource.stop(0);
       this.currentBgmSource.disconnect();
-    } catch (_) {}
+    } catch (_) { }
     this.currentBgmSource = null;
     this.bgmIsPaused = true;
   }
@@ -200,22 +200,22 @@ class AudioService {
 
   stopBGM() {
     if (this.currentBgmSource) {
-      try { this.currentBgmSource.stop(0); } catch (_) {}
-      try { this.currentBgmSource.disconnect(); } catch (_) {}
+      try { this.currentBgmSource.stop(0); } catch (_) { }
+      try { this.currentBgmSource.disconnect(); } catch (_) { }
       this.currentBgmSource = null;
     }
-    this.currentBgmKey   = null;
-    this.pendingBGM      = null;
+    this.currentBgmKey = null;
+    this.pendingBGM = null;
     this.bgmPausedOffset = 0;
-    this.bgmStartedAt    = 0;
-    this.bgmIsPaused     = false;
+    this.bgmStartedAt = 0;
+    this.bgmIsPaused = false;
   }
 
   stopAll() {
     this.stopBGM();
     this.activeSESources.forEach(src => {
-      try { src.stop(0); } catch (_) {}
-      try { src.disconnect(); } catch (_) {}
+      try { src.stop(0); } catch (_) { }
+      try { src.disconnect(); } catch (_) { }
     });
     this.activeSESources.clear();
   }
@@ -241,7 +241,7 @@ class AudioService {
   private playSE(key: string) {
     if (!this.seEnabled || this.state !== 'ready' || !this.ctx || !this.seGain) return;
     try {
-      if (this.ctx.state === 'suspended') { this.ctx.resume().catch(() => {}); return; }
+      if (this.ctx.state === 'suspended') { this.ctx.resume().catch(() => { }); return; }
       const buffer = this.buffers[key];
       if (!buffer) return; // バッファなしは無音で続行
       const source = this.ctx.createBufferSource();
@@ -260,18 +260,18 @@ class AudioService {
     try {
       const rate = ratio > 0.5 ? 1.0 + (ratio - 0.5) * 0.3 : 1.0;
       this.currentBgmSource.playbackRate.setValueAtTime(Math.min(rate, 1.3), this.ctx.currentTime);
-    } catch (_) {}
+    } catch (_) { }
   }
 
-  playMove()                    { this.playSE('se_move'); }
-  playRotate()                  { this.playSE('se_rotate'); }
-  playLock()                    { this.playSE('se_lock'); }
-  playLockHeavy()               { this.playSE('se_drop'); }
-  playHardDrop()                { this.playSE('se_drop'); }
+  playMove() { this.playSE('se_move'); }
+  playRotate() { this.playSE('se_rotate'); }
+  playLock() { this.playSE('se_lock'); }
+  playLockHeavy() { this.playSE('se_drop'); }
+  playHardDrop() { this.playSE('se_drop'); }
   playLineClear(_lines: number) { this.playSE('se_clear'); }
-  playTSpin()                   { this.playSE('se_tspin'); }
-  playAllClear()                { this.playSE('se_tspin'); }
-  playPause()                   { this.playSE('se_rotate'); }
+  playTSpin() { this.playSE('se_tspin'); }
+  playAllClear() { this.playSE('se_tspin'); }
+  playPause() { this.playSE('se_rotate'); }
 
   playCombo(combo: number) {
     if (!this.seEnabled || this.state !== 'ready' || !this.ctx || !this.seGain) return;
