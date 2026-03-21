@@ -962,6 +962,8 @@ useEffect(() => {
     togglePause,
     resetGame,
     quitGame,
-    clearPlayerAttack
+    clearPlayerAttack,
+    setGameOver,
+    setIsWinner
   };
 };

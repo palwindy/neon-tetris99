@@ -49,7 +49,7 @@ export type ControllerAction =
 
 export type ControllerMapping = Record<ControllerAction, number>;
 
-export type MultiPlayerStatus = 'searching' | 'found' | 'ready' | 'starting';
+export type MultiPlayerStatus = 'searching' | 'found' | 'ready' | 'starting' | 'playing' | 'defeated';
 
 export interface MultiPlayer {
   id: string;

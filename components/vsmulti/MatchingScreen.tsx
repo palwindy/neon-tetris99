@@ -23,8 +23,13 @@ export const MatchingScreen: React.FC<MatchingScreenProps> = ({ onGameStart, onB
   const myStatus = you?.status;
 
   useEffect(() => {
-    multiplayerService.joinRoom(roomId, setPlayers);
-    return () => multiplayerService.leaveRoom();
+    multiplayerService.joinRoom(roomId);
+    multiplayerService.addListener(setPlayers);
+    return () => {
+      multiplayerService.removeListener(setPlayers);
+      // multiplayerService.leaveRoom() は App.tsx 側で管理するか、ここでの leaveRoom は慎重に。
+      // 今回は App.tsx が全体を管理する方針にするため、ここでは leave しない
+    };
   }, [roomId]);
 
   useEffect(() => {
