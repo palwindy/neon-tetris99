@@ -38,16 +38,15 @@ export const MatchingScreen: React.FC<MatchingScreenProps> = ({ onGameStart, onB
       setCountdown(3);
     }
   }, [players, countdown, onGameStart, roomId]);
-
   useEffect(() => {
     if (countdown === null) return;
     if (countdown === 0) {
-      const timer = setTimeout(() => onGameStart(roomId, players), 800);
+      const timer = window.setTimeout(() => onGameStart(roomId, players), 800);
       return () => clearTimeout(timer);
     }
-    const timer = setTimeout(() => setCountdown(c => (c ?? 1) - 1), 1000);
+    const timer = window.setTimeout(() => setCountdown(c => (c ?? 1) - 1), 1000);
     return () => clearTimeout(timer);
-  }, [countdown, onGameStart, players, roomId]);
+  }, [countdown, onGameStart, roomId]); // playersを依存から外し、同期更新によるリセットを防ぐ
 
   const handleReady = () => {
     multiplayerService.setReady();

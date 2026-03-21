@@ -17,7 +17,7 @@ import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 import SplashScreen from './components/ui/SplashScreen';
 import { multiplayerService } from './services/multiplayerService';
 
-const version = "1.43";
+const version = "1.44";
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('title');
@@ -81,6 +81,8 @@ function App() {
           audioService.startBGM('game');
         }
       }
+    } else if (isWinner) {
+      audioService.startBGM('win');
     } else if (!gameOver && !isWinner) {
       audioService.stopBGM();
     }

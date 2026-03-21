@@ -26,7 +26,7 @@ class AudioService {
 
   private buffers: Record<string, AudioBuffer> = {};
   private state: 'idle' | 'loading' | 'ready' | 'error' = 'idle';
-  private pendingBGM: 'title' | 'game' | null = null;
+  private pendingBGM: 'title' | 'game' | 'win' | null = null;
   private onReadyCallback: (() => void) | null = null;
 
   private readonly ALL_ASSETS: Record<string, string> = {
@@ -40,6 +40,7 @@ class AudioService {
     se_gameover: '/assets/se_gameover.ogg?v=1.35',
     bgm_title:   '/assets/bgm_title.ogg?v=1.35',
     bgm_game:    '/assets/bgm_game.ogg?v=1.35',
+    bgm_win:     '/assets/Result (Win).ogg?v=1.44',
   };
 
   /** ロード完了時に呼ぶコールバックを登録する */
@@ -172,7 +173,7 @@ class AudioService {
   getBgmIsPaused(): boolean { return this.bgmIsPaused; }
 
   // --- BGM ---
-  startBGM(mode: 'title' | 'game') {
+  startBGM(mode: 'title' | 'game' | 'win') {
     if (!this.bgmEnabled) return;
     if (this.state !== 'ready') { 
       this.pendingBGM = mode; 
@@ -181,7 +182,7 @@ class AudioService {
     if (this.currentBgmKey === mode && this.currentBgmSource && !this.bgmIsPaused) return;
     if (this.currentBgmKey !== mode) this.stopBGM();
     this.currentBgmKey = mode;
-    const bufferKey = mode === 'title' ? 'bgm_title' : 'bgm_game';
+    const bufferKey = mode === 'title' ? 'bgm_title' : mode === 'game' ? 'bgm_game' : 'bgm_win';
     const buffer = this.buffers[bufferKey];
     if (buffer) {
       this._playBGMBuffer(buffer, 0);
@@ -207,7 +208,7 @@ class AudioService {
 
   resumeBGM() {
     if (!this.bgmEnabled || !this.ctx || !this.bgmIsPaused || !this.currentBgmKey) return;
-    const bufferKey = this.currentBgmKey === 'title' ? 'bgm_title' : 'bgm_game';
+    const bufferKey = this.currentBgmKey === 'title' ? 'bgm_title' : this.currentBgmKey === 'game' ? 'bgm_game' : 'bgm_win';
     const buffer = this.buffers[bufferKey];
     if (buffer) this._playBGMBuffer(buffer, this.bgmPausedOffset);
   }
