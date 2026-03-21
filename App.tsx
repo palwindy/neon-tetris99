@@ -40,6 +40,7 @@ function App() {
     gameOver, isWinner, paused, gameStarted, clearingRows, specialMessage,
     gameMode, cpuHealth, nextAttackTime, playerAttack, pendingGarbage,
     move, rotate, rotateCCW, hardDrop, hold, togglePause, resetGame, quitGame,
+    triggerFinishAnimation,
     setIsWinner, setGameOver, setPendingGarbage
   } = useTetrisGame({
     onAttackSent: handleAttackSent
@@ -143,16 +144,14 @@ function App() {
   // --- Win/Loss Effects ---
   useEffect(() => {
     if (isWinner && audioService.getCurrentBGM() !== 'win') {
-      audioService.playWinStinger();
-      const timer = setTimeout(() => audioService.startBGM('win'), 2500);
+      const timer = setTimeout(() => audioService.startBGM('win'), 1800);
       return () => clearTimeout(timer);
     }
   }, [isWinner]);
 
   useEffect(() => {
     if (gameOver && audioService.getCurrentBGM() !== 'lose') {
-      audioService.playLossStinger();
-      const timer = setTimeout(() => audioService.startBGM('lose'), 2500);
+      const timer = setTimeout(() => audioService.startBGM('lose'), 1800);
       return () => clearTimeout(timer);
     }
   }, [gameOver]);
@@ -178,10 +177,10 @@ function App() {
     }
 
     if (opponent && opponent.status === 'defeated' && !gameOver && !isWinner) {
-      console.log(`[App] Opponent ${opponent.id} defeated. Setting isWinner to true.`);
-      setIsWinner(true);
+      console.log(`[App] Opponent ${opponent.id} defeated. Triggering win animation.`);
+      triggerFinishAnimation('win');
     }
-  }, [multiPlayers, gameOver, isWinner, gameStarted, gameMode, setIsWinner]);
+  }, [multiPlayers, gameOver, isWinner, gameStarted, gameMode, triggerFinishAnimation]);
 
   // --- Attack Sync ---
   useEffect(() => {

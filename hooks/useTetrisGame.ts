@@ -1069,6 +1069,7 @@ useEffect(() => {
     resetGame,
     quitGame,
     clearPlayerAttack,
+    triggerFinishAnimation,
     setGameOver,
     setIsWinner,
     setPendingGarbage
