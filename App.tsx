@@ -106,7 +106,7 @@ function App() {
       audioService.pauseBGM();
       // ゲーム中なら自動ポーズに移行
       if (currentScreen === 'game' && gameStarted && !gameOver && !isWinner && !paused) {
-        setPaused(true);
+        togglePause();
       }
     };
 
