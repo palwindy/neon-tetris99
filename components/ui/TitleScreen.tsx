@@ -18,7 +18,7 @@ interface TitleScreenProps {
 }
 
 const TitleScreen: React.FC<TitleScreenProps> = ({ version, onStartSingle, onStartCpu, onStartMulti, onOpenSettings }) => (
-  <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center"
+  <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center animate-fadeIn"
     style={{ background: 'radial-gradient(ellipse at center, #1a0a2e 0%, #0a0a14 70%)' }}>
     <TitleLogo />
     <div className="flex flex-col gap-3 mb-6 w-full max-w-[260px] px-4">

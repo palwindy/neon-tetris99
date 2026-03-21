@@ -16,7 +16,7 @@ import TitleScreen from './components/ui/TitleScreen';
 import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 import SplashScreen from './components/ui/SplashScreen';
 
-const version = "1.36";
+const version = "1.37";
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('title');
@@ -94,7 +94,7 @@ function App() {
           console.log("[App] Fallback splash close triggered");
           setShowSplash(false);
         }
-      }, 3000); // 3秒待っても消えなければ強制
+      }, 1500); // 1.5秒に短縮 (スプラッシュのフェード0.8s + 余裕)
       return () => clearTimeout(timer);
     }
   }, [audioReady, showSplash]);
