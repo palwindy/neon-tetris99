@@ -22,6 +22,7 @@ export interface UseTetrisGameProps {
     onLineClear?: (lines: number) => void;
     onTSpin?: (lines: number) => void;
     onAttackSent?: (lines: number) => void;
+    onFinishingStarted?: (type: 'win' | 'lose', mode: GameMode) => void;
 }
 
 export const useTetrisGame = ({
@@ -29,7 +30,8 @@ export const useTetrisGame = ({
     onGameOver,
     onLineClear,
     onTSpin,
-    onAttackSent
+    onAttackSent,
+    onFinishingStarted
 }: UseTetrisGameProps = {}) => {
   const [grid, setGrid] = useState<Grid>(createGrid());
   const [activePiece, setActivePiece] = useState<TetrominoType>('T');
@@ -79,6 +81,8 @@ export const useTetrisGame = ({
     setGameStarted(false);
     finishingTypeRef.current = type;
     finishingRowRef.current = BOARD_HEIGHT - 1;
+
+    if (onFinishingStarted) onFinishingStarted(type, gameMode);
 
     if (type === 'win') audioService.playWinStinger();
     else audioService.playLossStinger();
@@ -1070,6 +1074,7 @@ useEffect(() => {
     quitGame,
     clearPlayerAttack,
     triggerFinishAnimation,
+    isFinishing,
     setGameOver,
     setIsWinner,
     setPendingGarbage

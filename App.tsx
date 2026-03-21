@@ -17,7 +17,7 @@ import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 import SplashScreen from './components/ui/SplashScreen';
 import { multiplayerService } from './services/multiplayerService';
 
-const version = "2.07";
+const version = "2.10";
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('title');
@@ -34,16 +34,24 @@ function App() {
     multiplayerService.sendAttack(lines);
   }, []);
 
+  const handleFinishingStarted = useCallback((type: 'win' | 'lose', mode: any) => {
+    if (mode === 'MULTI' && type === 'lose') {
+      console.log(`[App] Loss finishing started. Updating status to defeated.`);
+      multiplayerService.updateStatus('defeated');
+    }
+  }, []);
+
   const {
     grid, activePiece, activeShape, position, ghostPosition,
     nextQueue, holdPiece, score, lines, level,
     gameOver, isWinner, paused, gameStarted, clearingRows, specialMessage,
     gameMode, cpuHealth, nextAttackTime, playerAttack, pendingGarbage,
     move, rotate, rotateCCW, hardDrop, hold, togglePause, resetGame, quitGame,
-    triggerFinishAnimation,
+    triggerFinishAnimation, isFinishing,
     setIsWinner, setGameOver, setPendingGarbage
   } = useTetrisGame({
-    onAttackSent: handleAttackSent
+    onAttackSent: handleAttackSent,
+    onFinishingStarted: handleFinishingStarted
   });
 
   const [multiPlayers, setMultiPlayers] = useState<MultiPlayer[]>([]);
@@ -162,12 +170,6 @@ function App() {
 
     const myId = multiplayerService.getPlayerId();
 
-    // 自分が負けた場合
-    if (gameOver) {
-      console.log(`[App] Game Over detected in MULTI mode. Updating status to defeated.`);
-      multiplayerService.updateStatus('defeated');
-    }
-
     // 相手の状態を監視
     const opponent = multiPlayers.find(p => p.id !== myId);
     
@@ -176,11 +178,11 @@ function App() {
       // console.log(`[App] MultiPlay Status: Me=${myId}, Opponent=${opponent?.id}, OppStatus=${opponent?.status}`);
     }
 
-    if (opponent && opponent.status === 'defeated' && !gameOver && !isWinner) {
+    if (opponent && opponent.status === 'defeated' && !gameOver && !isWinner && gameStarted && currentScreen === 'game' && !isFinishing) {
       console.log(`[App] Opponent ${opponent.id} defeated. Triggering win animation.`);
       triggerFinishAnimation('win');
     }
-  }, [multiPlayers, gameOver, isWinner, gameStarted, gameMode, triggerFinishAnimation]);
+  }, [multiPlayers, gameOver, isWinner, gameStarted, gameMode, currentScreen, isFinishing, triggerFinishAnimation]);
 
   // --- Attack Sync ---
   useEffect(() => {
@@ -212,7 +214,7 @@ function App() {
   }, [resetGame]);
 
   const handleQuitToTitle = useCallback(() => {
-    audioService.stopBGM();
+    audioService.stopAll();
     if (gameMode === 'MULTI') multiplayerService.leaveRoom();
     quitGame();
     setShowTitle(true);
@@ -220,7 +222,7 @@ function App() {
   }, [gameMode, quitGame]);
 
   const handleRetry = useCallback(() => {
-    audioService.stopBGM(); 
+    audioService.stopAll(); 
     if (gameMode === 'MULTI') {
       multiplayerService.updateStatus('found');
       setCurrentScreen('matching');
