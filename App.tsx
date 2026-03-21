@@ -48,6 +48,7 @@ function App() {
     gameMode, cpuHealth, nextAttackTime, playerAttack, pendingGarbage,
     move, rotate, rotateCCW, hardDrop, hold, togglePause, resetGame, quitGame,
     triggerFinishAnimation, isFinishing,
+    isCountdown, setIsCountdown, countdownValue, setCountdownValue,
     setIsWinner, setGameOver, setPendingGarbage
   } = useTetrisGame({
     onAttackSent: handleAttackSent,
@@ -58,7 +59,7 @@ function App() {
 
   const { mapping, isRemapping, remapAction, startRemap, cancelRemap, resetMapping } = useGameInput(
     { move, rotate, rotateCCW, hardDrop, hold, togglePause },
-    gameStarted && !showSettings,
+    gameStarted && !showSettings && !isCountdown,
     paused,
     gameOver,
   );
@@ -198,20 +199,43 @@ function App() {
     }
   }, [multiPlayers, gameMode, gameStarted, setPendingGarbage]);
 
+  const runCountdownSequence = useCallback(async (mode: any) => {
+    setIsCountdown(true);
+    setCountdownValue('READY');
+    resetGame(mode, false); // 表示はするが落下はさせない
+    audioService.stopBGM();
+    audioService.playReady();
+
+    await new Promise(r => setTimeout(r, 1200));
+
+    for (let i = 3; i >= 1; i--) {
+      setCountdownValue(i);
+      audioService.playCountdown();
+      await new Promise(r => setTimeout(r, 1000));
+    }
+
+    setCountdownValue('GO!');
+    audioService.playGo();
+    resetGame(mode, true); // ここで実際に開始（落下開始）
+    // BGMはApp.tsxのuseEffect(gameStarted)で自動開始されるはず
+
+    await new Promise(r => setTimeout(r, 800));
+    setCountdownValue(null);
+    setIsCountdown(false);
+  }, [resetGame, setIsCountdown, setCountdownValue]);
+
   // --- Navigation ---
   const handleStartGame = useCallback((mode: 'SINGLE' | 'CPU') => {
-    audioService.stopBGM();
     setShowTitle(false);
     setCurrentScreen('game');
-    resetGame(mode);
-  }, [resetGame]);
+    runCountdownSequence(mode);
+  }, [runCountdownSequence]);
 
   const handleMultiplayerGameStart = useCallback((_roomId: string, _players: MultiPlayer[]) => {
-    audioService.stopBGM(); 
     setCurrentScreen('game'); 
-    resetGame('MULTI');
     multiplayerService.updateStatus('playing');
-  }, [resetGame]);
+    runCountdownSequence('MULTI');
+  }, [runCountdownSequence]);
 
   const handleQuitToTitle = useCallback(() => {
     audioService.stopAll();
@@ -229,9 +253,9 @@ function App() {
       // 重要: マルチ時は自動開始せずにリセットのみ（カウントダウン待機）
       resetGame('MULTI', false);
     } else {
-      resetGame();
+      runCountdownSequence(gameMode);
     }
-  }, [gameMode, resetGame]);
+  }, [gameMode, runCountdownSequence, resetGame]);
 
   const overlayProps = {
     playerAttack, gameOver, isWinner, paused, gameStarted, score,
@@ -298,7 +322,7 @@ function App() {
                 />
               </div>
 
-              <TetrisBoard grid={grid} activeShape={activeShape} position={position} activePiece={activePiece} clearingRows={clearingRows} specialMessage={specialMessage} ghostPosition={ghostPosition} />
+              <TetrisBoard grid={grid} activeShape={activeShape} position={position} activePiece={activePiece} clearingRows={clearingRows} specialMessage={specialMessage} ghostPosition={ghostPosition} countdownValue={countdownValue} />
               <Overlays {...overlayProps} />
             </div>
 

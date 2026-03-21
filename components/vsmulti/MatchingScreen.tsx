@@ -17,7 +17,6 @@ export const MatchingScreen: React.FC<MatchingScreenProps> = ({ onGameStart, onB
   };
 
   const [players, setPlayers] = useState<MultiPlayer[]>([]);
-  const [countdown, setCountdown] = useState<number | null>(null);
   const [roomId, setRoomId] = useState(multiplayerService.getRoomId());
   const [inputRoomId, setInputRoomId] = useState('');
   const [copied, setCopied] = useState(false);
@@ -39,19 +38,10 @@ export const MatchingScreen: React.FC<MatchingScreenProps> = ({ onGameStart, onB
 
   useEffect(() => {
     const allReady = players.length >= 2 && players.every(p => p.status === 'ready');
-    if (allReady && countdown === null) {
-      setCountdown(3);
+    if (allReady) {
+      onGameStart(roomId, players);
     }
-  }, [players, countdown, onGameStart, roomId]);
-  useEffect(() => {
-    if (countdown === null) return;
-    if (countdown === 0) {
-      const timer = window.setTimeout(() => onGameStart(roomId, players), 800);
-      return () => clearTimeout(timer);
-    }
-    const timer = window.setTimeout(() => setCountdown(c => (c ?? 1) - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [countdown, onGameStart, roomId]); // playersを依存から外し、同期更新によるリセットを防ぐ
+  }, [players, onGameStart, roomId]);
 
   const handleReady = () => {
     multiplayerService.setReady();
@@ -81,8 +71,7 @@ export const MatchingScreen: React.FC<MatchingScreenProps> = ({ onGameStart, onB
       <div className="flex items-center justify-between px-4 py-3 shrink-0">
         <button 
           onClick={handleBack} 
-          disabled={countdown !== null}
-          className={`p-1 transition-all ${countdown !== null ? 'opacity-0 scale-90 pointer-events-none' : 'text-gray-400 hover:text-white'}`}
+          className="p-1 transition-all text-gray-400 hover:text-white hover:border-gray-500 active:scale-95"
         >
           <X size={24} />
         </button>
@@ -147,22 +136,16 @@ export const MatchingScreen: React.FC<MatchingScreenProps> = ({ onGameStart, onB
           </div>
         </div>
 
-        {countdown !== null && (
-          <div className="text-center py-2">
-            <span className="text-6xl font-black animate-ping inline-block" style={{ color: '#e040fb', textShadow: '0 0 20px #e040fb' }}>
-              {countdown === 0 ? 'GO!' : countdown}
-            </span>
-          </div>
-        )}
+        {/* カウントダウン表示はゲーム画面側へ移行 */}
 
-        {countdown === null && (
+        {
           <button
-            disabled={!opponent || myStatus === 'ready'}
+            disabled={!opponent || myStatus === 'ready' || players.length < 2}
             onClick={handleReady}
-            className={`w-full py-4 rounded-xl font-black text-lg tracking-widest transition-all duration-300 ${!opponent || myStatus === 'ready' ? 'bg-gray-800 text-gray-600 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-500 text-white shadow-[0_0_16px_#a855f7]'}`}>
+            className={`w-full py-4 rounded-xl font-black text-lg tracking-widest transition-all duration-300 ${!opponent || myStatus === 'ready' || players.length < 2 ? 'bg-gray-800 text-gray-600 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-500 text-white shadow-[0_0_16px_#a855f7]'}`}>
             {myStatus === 'ready' ? '✓ 準備完了！相手を待っています' : '準備完了'}
           </button>
-        )}
+        }
 
         <div className="rounded-xl border border-gray-700 bg-black/30 p-3">
           <p className="text-xs text-gray-400 mb-2 tracking-widest text-center">別のルームIDで参加</p>
@@ -178,9 +161,9 @@ export const MatchingScreen: React.FC<MatchingScreenProps> = ({ onGameStart, onB
               className="flex-1 bg-black/60 border border-gray-600 rounded-lg px-3 py-2 text-white text-center text-xl tracking-[0.3em] font-bold focus:border-purple-400 outline-none"
             />
             <button
-              disabled={inputRoomId.length !== 4 || countdown !== null}
+              disabled={inputRoomId.length !== 4}
               onClick={() => handleJoinRoom(inputRoomId)}
-              className={`px-4 py-2 rounded-lg font-bold text-sm tracking-wide transition-all ${inputRoomId.length === 4 && countdown === null ? 'bg-cyan-600 hover:bg-cyan-500 text-white' : 'bg-gray-800 text-gray-600 cursor-not-allowed'}`}>
+              className={`px-4 py-2 rounded-lg font-bold text-sm tracking-wide transition-all ${inputRoomId.length === 4 ? 'bg-cyan-600 hover:bg-cyan-500 text-white' : 'bg-gray-800 text-gray-600 cursor-not-allowed'}`}>
               参加
             </button>
           </div>

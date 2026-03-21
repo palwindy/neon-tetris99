@@ -10,7 +10,8 @@ interface BoardProps {
   clearingRows: number[];
   specialMessage: string | null;
   ghostPosition: Position;
-  style?: React.CSSProperties; // Add style prop
+  countdownValue?: number | string | null; // Add this
+  style?: React.CSSProperties; 
 }
 
 const TetrisBoard: React.FC<BoardProps> = ({ 
@@ -21,6 +22,7 @@ const TetrisBoard: React.FC<BoardProps> = ({
   clearingRows,
   specialMessage,
   ghostPosition,
+  countdownValue,
   style
 }) => {
   // Merge active piece and ghost piece into grid for rendering (without locking)
@@ -81,6 +83,19 @@ const TetrisBoard: React.FC<BoardProps> = ({
           </div>
           {/* Flash background */}
           <div className="absolute inset-0 bg-white/20 animate-pulse -z-10"></div>
+        </div>
+      )}
+
+      {/* Countdown Overlay */}
+      {countdownValue && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none">
+          <div className="animate-pulse-fast text-7xl font-black italic text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.9)] scale-110 transition-transform duration-200">
+            {countdownValue}
+          </div>
+          {/* Flash Effect for GO! */}
+          {countdownValue === 'GO!' && (
+            <div className="absolute inset-0 bg-white/30 animate-ping -z-10"></div>
+          )}
         </div>
       )}
 

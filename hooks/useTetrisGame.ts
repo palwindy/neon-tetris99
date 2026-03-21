@@ -57,6 +57,10 @@ export const useTetrisGame = ({
   
   // CPU Attack Timing
   const [nextAttackTime, setNextAttackTime] = useState<number>(0);
+  
+  // Countdown State
+  const [isCountdown, setIsCountdown] = useState(false);
+  const [countdownValue, setCountdownValue] = useState<number | string | null>(null);
   // Player Attack Event { damage, timestamp }
   const [playerAttack, setPlayerAttack] = useState<{ damage: number; id: number } | null>(null);
 
@@ -1075,6 +1079,10 @@ useEffect(() => {
     clearPlayerAttack,
     triggerFinishAnimation,
     isFinishing,
+    isCountdown,
+    setIsCountdown,
+    countdownValue,
+    setCountdownValue,
     setGameOver,
     setIsWinner,
     setPendingGarbage

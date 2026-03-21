@@ -49,6 +49,9 @@ class AudioService {
     se_pause:    '/assets/se_pause.ogg?v=2.05',
     se_tetris:   '/assets/se_tetris.ogg?v=2.05',
     se_perfect:  '/assets/se_perfect.ogg?v=2.05',
+    se_ready:    '/assets/se_redy.ogg?v=2.12',
+    se_count:    '/assets/se_count.ogg?v=2.12',
+    se_go:       '/assets/se_Go.ogg?v=2.12',
   };
 
   /** ロード完了時に呼ぶコールバックを登録する */
@@ -320,6 +323,9 @@ class AudioService {
   }
   playTSpin()                   { this.playSE('se_rotate'); }
   playAllClear()                { this.playSE('se_perfect'); }
+  playReady()                   { this.playSE('se_ready'); }
+  playCountdown()               { this.playSE('se_count'); }
+  playGo()                      { this.playSE('se_go'); }
 
   playWinStinger() {
     this.stopAll();
