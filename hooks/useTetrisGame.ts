@@ -821,7 +821,8 @@ useEffect(() => {
     return () => clearInterval(lockCheck);
   }, [gameStarted, paused, gameOver, isWinner, clearingRows.length]); 
 
-  const resetGame = (mode?: GameMode) => {
+  const resetGame = (mode?: GameMode, autoStart: boolean = true) => {
+    setGameStarted(false); // 一旦停止させる
     setGrid(createGrid());
     setScore(0);
     setLines(0);
@@ -870,7 +871,7 @@ useEffect(() => {
         position: startPos,
         rotationIndex: 0,
         nextQueue: initialBag,
-        gameStarted: true,
+        gameStarted: autoStart,
         gameOver: false,
         isWinner: false,
         paused: false,
@@ -881,7 +882,11 @@ useEffect(() => {
     lastMoveWasRotate.current = false;
     lastKickIndex.current = 0;
 
-    setGameStarted(true);
+    if (autoStart) {
+      setGameStarted(true);
+    } else {
+      setGameStarted(false);
+    }
   };
 
   const quitGame = () => {

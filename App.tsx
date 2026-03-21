@@ -17,7 +17,7 @@ import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 import SplashScreen from './components/ui/SplashScreen';
 import { multiplayerService } from './services/multiplayerService';
 
-const version = "1.44";
+const version = "1.45";
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('title');
@@ -162,35 +162,39 @@ function App() {
   }, [multiPlayers, gameOver, isWinner, gameStarted, gameMode, setIsWinner]);
 
   // --- Navigation ---
-  const handleStartGame = (mode: 'SINGLE' | 'CPU') => {
+  const handleStartGame = useCallback((mode: 'SINGLE' | 'CPU') => {
     audioService.stopAll();
     setShowTitle(false);
     setCurrentScreen('game');
     resetGame(mode);
-  };
-  const handleMultiplayerGameStart = (_roomId: string, _players: MultiPlayer[]) => {
+  }, [resetGame]);
+
+  const handleMultiplayerGameStart = useCallback((_roomId: string, _players: MultiPlayer[]) => {
     audioService.stopAll(); 
     setCurrentScreen('game'); 
     resetGame('MULTI');
     multiplayerService.updateStatus('playing');
-  };
-  const handleQuitToTitle = () => {
+  }, [resetGame]);
+
+  const handleQuitToTitle = useCallback(() => {
     audioService.stopAll();
     if (gameMode === 'MULTI') multiplayerService.leaveRoom();
     quitGame();
     setShowTitle(true);
     setCurrentScreen('title');
-  };
-  const handleRetry = () => {
+  }, [gameMode, quitGame]);
+
+  const handleRetry = useCallback(() => {
     audioService.stopAll(); 
     if (gameMode === 'MULTI') {
       multiplayerService.updateStatus('found');
       setCurrentScreen('matching');
-      resetGame('MULTI');
+      // 重要: マルチ時は自動開始せずにリセットのみ（カウントダウン待機）
+      resetGame('MULTI', false);
     } else {
       resetGame();
     }
-  };
+  }, [gameMode, resetGame]);
 
   const overlayProps = {
     playerAttack, gameOver, isWinner, paused, gameStarted, score,
