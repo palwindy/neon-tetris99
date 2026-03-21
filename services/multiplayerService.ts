@@ -23,6 +23,7 @@ class MultiplayerService {
   private listeners: Set<RoomEventCallback> = new Set();
   private unsubscribe: Unsubscribe | null = null;
   private currentPlayers: MultiPlayer[] = [];
+  private lastStatus: MultiPlayerStatus | null = null;
 
   constructor() {
     this.playerId = this.getOrCreatePlayerId();
@@ -122,7 +123,11 @@ class MultiplayerService {
 
   updateStatus(status: MultiPlayerStatus) {
     if (!this.roomId) return;
-    console.log(`[MultiplayerService] updateStatus: ${status} for roomId: ${this.roomId}`);
+    if (this.lastStatus === status) return;
+
+    console.log(`[MultiplayerService] updateStatus: ${this.lastStatus} -> ${status} for roomId: ${this.roomId}`);
+    this.lastStatus = status;
+    
     const playerRef = ref(db, `rooms/${this.roomId}/players/${this.playerId}`);
     update(playerRef, { status });
   }

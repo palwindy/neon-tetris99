@@ -17,7 +17,7 @@ import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 import SplashScreen from './components/ui/SplashScreen';
 import { multiplayerService } from './services/multiplayerService';
 
-const version = "1.42";
+const version = "1.43";
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('title');
@@ -134,7 +134,10 @@ function App() {
   }, [nextAttackTime, gameStarted, gameMode, paused, isWinner]);
 
   useEffect(() => {
-    if (gameMode !== 'MULTI' || !gameStarted) return;
+    // MULTIモードでのみ動作。gameStartedが同時にfalseになるため!gameStartedガードは置かない
+    if (gameMode !== 'MULTI') return;
+
+    const myId = multiplayerService.getPlayerId();
 
     // 自分が負けた場合
     if (gameOver) {
@@ -142,12 +145,12 @@ function App() {
       multiplayerService.updateStatus('defeated');
     }
 
-    // 相手が負けた場合
-    const myId = multiplayerService.getPlayerId();
+    // 相手の状態を監視
     const opponent = multiPlayers.find(p => p.id !== myId);
     
     if (multiPlayers.length > 1) {
-      console.log(`[App] MultiPlay Status: Me=${myId}, Opponent=${opponent?.id}, OppStatus=${opponent?.status}`);
+      // ログが多すぎないよう、相手がdefeatedになった時か初回のみ出すのが理想だがデバッグのため継続
+      // console.log(`[App] MultiPlay Status: Me=${myId}, Opponent=${opponent?.id}, OppStatus=${opponent?.status}`);
     }
 
     if (opponent && opponent.status === 'defeated' && !gameOver && !isWinner) {
