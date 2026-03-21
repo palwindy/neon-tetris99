@@ -30,19 +30,16 @@ class AudioService {
   private onReadyCallback: (() => void) | null = null;
 
   private readonly ALL_ASSETS: Record<string, string> = {
-    // ロゴ音（ファイルがなくてもスキップして続行）
-    se_logo:     '/assets/se_logo.ogg',
-    // SE
-    se_move:     '/assets/se_move.ogg',
-    se_rotate:   '/assets/se_rotate.ogg',
-    se_drop:     '/assets/se_drop.ogg',
-    se_lock:     '/assets/se_lock.ogg',
-    se_clear:    '/assets/se_clear.ogg',
-    se_tspin:    '/assets/se_tspin.ogg',
-    se_gameover: '/assets/se_gameover.ogg',
-    // BGM
-    bgm_title:   '/assets/bgm_title.ogg',
-    bgm_game:    '/assets/bgm_game.ogg',
+    se_logo:     '/assets/se_logo.ogg?v=1.31',
+    se_move:     '/assets/se_move.ogg?v=1.31',
+    se_rotate:   '/assets/se_rotate.ogg?v=1.31',
+    se_drop:     '/assets/se_drop.ogg?v=1.31',
+    se_lock:     '/assets/se_lock.ogg?v=1.31',
+    se_clear:    '/assets/se_clear.ogg?v=1.31',
+    se_tspin:    '/assets/se_tspin.ogg?v=1.31',
+    se_gameover: '/assets/se_gameover.ogg?v=1.31',
+    bgm_title:   '/assets/bgm_title.ogg?v=1.31',
+    bgm_game:    '/assets/bgm_game.ogg?v=1.31',
   };
 
   /** ロード完了時に呼ぶコールバックを登録する */

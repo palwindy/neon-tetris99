@@ -73,7 +73,7 @@ const LoadingDots: React.FC = () => {
   }, []);
   return (
     <p className="text-gray-400 text-sm tracking-widest font-mono">
-      loading{dots}
+      loading<span className="inline-block w-6 text-left">{dots}</span>
     </p>
   );
 };
