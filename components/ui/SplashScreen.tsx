@@ -7,7 +7,12 @@ interface SplashScreenProps {
 }
 
 const SplashScreen: React.FC<SplashScreenProps> = ({ onStart, complete, onDone }) => {
-  const [phase, setPhase] = useState<'waiting' | 'loading' | 'fading'>('waiting');
+  const [phase, setPhase] = useState<'waiting' | 'loading' | 'fading'>('loading');
+
+  useEffect(() => {
+    onStart();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // complete フラグが立ったらフェードアウト開始
   useEffect(() => {
@@ -18,22 +23,16 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onStart, complete, onDone }
     }
   }, [complete, phase, onDone]);
 
-  const handleTap = () => {
-    if (phase !== 'waiting') return;
-    setPhase('loading');
-    onStart();
-  };
+  // onClick / onTouchStart を削除し、自動進行に完全委託
 
   return (
     <div
       className={`
         fixed inset-0 z-[200] flex flex-col items-center justify-center
-        bg-white select-none cursor-pointer
+        bg-white select-none
         transition-opacity duration-700
-        ${phase === 'fading' ? 'opacity-0' : 'opacity-100'}
+        ${phase === 'fading' ? 'opacity-0 pointer-events-none' : 'opacity-100 pointer-events-auto'}
       `}
-      onClick={handleTap}
-      onTouchStart={handleTap}
     >
       {/* ロゴ */}
       <div className="flex flex-col items-center mb-8">
@@ -57,14 +56,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onStart, complete, onDone }
 
       {/* 状態テキスト */}
       <div className="absolute bottom-12 right-8 text-right">
-        {phase === 'waiting' && (
-          <p className="text-gray-400 text-sm tracking-widest animate-pulse">
-            Tap anywhere to start
-          </p>
-        )}
-        {(phase === 'loading' || phase === 'fading') && (
-          <LoadingDots />
-        )}
+        <LoadingDots />
       </div>
     </div>
   );

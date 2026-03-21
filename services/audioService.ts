@@ -237,6 +237,9 @@ class AudioService {
   private _playBGMBuffer(buffer: AudioBuffer, offset: number = 0) {
     if (!this.ctx || !this.bgmGain) return;
     try {
+      if (this.ctx.state === 'suspended') {
+        this.ctx.resume().catch(() => {});
+      }
       const source = this.ctx.createBufferSource();
       source.buffer = buffer;
       source.loop = true;
