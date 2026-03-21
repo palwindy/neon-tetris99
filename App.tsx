@@ -17,7 +17,7 @@ import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 import SplashScreen from './components/ui/SplashScreen';
 import { multiplayerService } from './services/multiplayerService';
 
-const version = "2.01";
+const version = "2.07";
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('title');
@@ -199,21 +199,21 @@ function App() {
 
   // --- Navigation ---
   const handleStartGame = useCallback((mode: 'SINGLE' | 'CPU') => {
-    audioService.stopAll();
+    audioService.stopBGM();
     setShowTitle(false);
     setCurrentScreen('game');
     resetGame(mode);
   }, [resetGame]);
 
   const handleMultiplayerGameStart = useCallback((_roomId: string, _players: MultiPlayer[]) => {
-    audioService.stopAll(); 
+    audioService.stopBGM(); 
     setCurrentScreen('game'); 
     resetGame('MULTI');
     multiplayerService.updateStatus('playing');
   }, [resetGame]);
 
   const handleQuitToTitle = useCallback(() => {
-    audioService.stopAll();
+    audioService.stopBGM();
     if (gameMode === 'MULTI') multiplayerService.leaveRoom();
     quitGame();
     setShowTitle(true);
@@ -221,7 +221,7 @@ function App() {
   }, [gameMode, quitGame]);
 
   const handleRetry = useCallback(() => {
-    audioService.stopAll(); 
+    audioService.stopBGM(); 
     if (gameMode === 'MULTI') {
       multiplayerService.updateStatus('found');
       setCurrentScreen('matching');
