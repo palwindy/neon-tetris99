@@ -1045,6 +1045,10 @@ useEffect(() => {
     }
   }, []);
 
+  const startGame = useCallback(() => {
+    setGameStarted(true);
+  }, []);
+
   return {
     grid,
     activePiece,
@@ -1075,6 +1079,7 @@ useEffect(() => {
     hold,
     togglePause,
     resetGame,
+    startGame,
     quitGame,
     clearPlayerAttack,
     triggerFinishAnimation,

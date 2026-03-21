@@ -27,6 +27,9 @@ const TetrisBoard: React.FC<BoardProps> = ({
 }) => {
   // Merge active piece and ghost piece into grid for rendering (without locking)
   const displayGrid = useMemo(() => {
+    // カウントダウン中はミノを表示しない
+    if (countdownValue) return grid.map(row => row.map(cell => ({ ...cell, isGhost: false })));
+
     // Clone grid
     const display = grid.map(row => row.map(cell => ({ ...cell, isGhost: false })));
 

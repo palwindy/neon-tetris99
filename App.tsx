@@ -46,7 +46,7 @@ function App() {
     nextQueue, holdPiece, score, lines, level,
     gameOver, isWinner, paused, gameStarted, clearingRows, specialMessage,
     gameMode, cpuHealth, nextAttackTime, playerAttack, pendingGarbage,
-    move, rotate, rotateCCW, hardDrop, hold, togglePause, resetGame, quitGame,
+    move, rotate, rotateCCW, hardDrop, hold, togglePause, resetGame, startGame, quitGame,
     triggerFinishAnimation, isFinishing,
     isCountdown, setIsCountdown, countdownValue, setCountdownValue,
     setIsWinner, setGameOver, setPendingGarbage
@@ -216,7 +216,7 @@ function App() {
 
     setCountdownValue('GO!');
     audioService.playGo();
-    resetGame(mode, true); // ここで実際に開始（落下開始）
+    startGame(); // 落下開始のみ行う
     // BGMはApp.tsxのuseEffect(gameStarted)で自動開始されるはず
 
     await new Promise(r => setTimeout(r, 800));
