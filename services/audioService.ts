@@ -1,9 +1,11 @@
-// v1.26: SE先行ロード版 AudioService
-// ルール
-//   1. SE (小ファイル) を先にロードして即座に ready → SEはすぐ鳴る
-//   2. BGM (大ファイル) はバックグラウンドでロード → 完了次第再生
-//   3. playSE / startBGM は ready 前は黙ってスキップ（init()の再帰呼び出し禁止）
-//   4. 全操作を try-catch で囲み、例外をゲームへ伝播させない
+// v1.28: スプラッシュ画面対応版 AudioService
+// 動作順序:
+//   1. init() 呼び出し → AudioContext 作成 → se_logo を即再生
+//   2. 全アセット (SE + BGM) をロード
+//   3. 完了後 onReadyCallback() を呼んでスプラッシュ画面を閉じる
+// ルール:
+//   - playSE / startBGM は ready 前は黙ってスキップ
+//   - 全操作を try-catch で囲み、例外をゲームへ伝播させない
 
 class AudioService {
   private ctx: AudioContext | null = null;
@@ -23,48 +25,56 @@ class AudioService {
   private activeSESources: Set<AudioBufferSourceNode> = new Set();
 
   private buffers: Record<string, AudioBuffer> = {};
-  // READY になって初めて SE / BGM を再生できる
   private state: 'idle' | 'loading' | 'ready' | 'error' = 'idle';
   private pendingBGM: 'title' | 'game' | null = null;
+  private onReadyCallback: (() => void) | null = null;
 
-  // SE (小ファイル): 先にロードして即座に ready にする
-  private readonly SE_ASSETS: Record<string, string> = {
-    se_move: '/assets/se_move.ogg',
-    se_rotate: '/assets/se_rotate.ogg',
-    se_drop: '/assets/se_drop.ogg',
-    se_lock: '/assets/se_lock.ogg',
-    se_clear: '/assets/se_clear.ogg',
-    se_tspin: '/assets/se_tspin.ogg',
+  private readonly ALL_ASSETS: Record<string, string> = {
+    // ロゴ音（ファイルがなくてもスキップして続行）
+    se_logo:     '/assets/se_logo.ogg',
+    // SE
+    se_move:     '/assets/se_move.ogg',
+    se_rotate:   '/assets/se_rotate.ogg',
+    se_drop:     '/assets/se_drop.ogg',
+    se_lock:     '/assets/se_lock.ogg',
+    se_clear:    '/assets/se_clear.ogg',
+    se_tspin:    '/assets/se_tspin.ogg',
     se_gameover: '/assets/se_gameover.ogg',
+    // BGM
+    bgm_title:   '/assets/bgm_title.ogg',
+    bgm_game:    '/assets/bgm_game.ogg',
   };
 
-  // BGM (大ファイル): バックグラウンドでロード
-  private readonly BGM_ASSETS: Record<string, string> = {
-    bgm_title: '/assets/bgm_title.ogg',
-    bgm_game: '/assets/bgm_game.ogg',
-  };
+  /** ロード完了時に呼ぶコールバックを登録する */
+  setOnReady(fn: () => void) {
+    if (this.state === 'ready') {
+      fn(); // すでに準備済みならすぐ呼ぶ
+    } else {
+      this.onReadyCallback = fn;
+    }
+  }
 
-  // ユーザー操作後に一度だけ呼ぶ
+  /** ユーザー操作後に一度だけ呼ぶ */
   async init(): Promise<void> {
     if (this.state === 'loading' || this.state === 'ready') return;
     this.state = 'loading';
 
-    // タイムアウト (8秒): Brave等でAudioContextがずっとsuspendedのままになるケースに対応
+    // タイムアウト (15秒): Brave等でAudioContextがずっとsuspendedになるケースに対応
     const initTimeout = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('AudioService init timeout')), 8000)
+      setTimeout(() => reject(new Error('AudioService init timeout')), 15000)
     );
 
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioCtx) { this.state = 'error'; return; }
+      if (!AudioCtx) { this.state = 'error'; this.onReadyCallback?.(); return; }
 
       this.ctx = new AudioCtx();
 
-      // resume() も3秒で打ち切る（Braveで永久待機しないように）
+      // resume() も3秒で打ち切る
       await Promise.race([
         this.ctx.resume(),
         new Promise<void>((_, rej) => setTimeout(rej, 3000)),
-      ]).catch(() => { });
+      ]).catch(() => {});
 
       this.masterGain = this.ctx.createGain();
       this.masterGain.gain.value = 1.0;
@@ -78,20 +88,35 @@ class AudioService {
       this.seGain.gain.value = 0.8;
       this.seGain.connect(this.masterGain);
 
-      // SE だけ先にロード → すぐ ready にする (BGMは小数秒後に使えればOK)
-      await Promise.race([this.loadAssets(this.SE_ASSETS), initTimeout]);
+      // se_logo だけ先に読み込んで即再生
+      await this.loadSingleAsset('se_logo', this.ALL_ASSETS['se_logo']);
+      this.playSE('se_logo');
+
+      // 残りアセットをすべてロード（タイムアウト付き）
+      const rest: Record<string, string> = { ...this.ALL_ASSETS };
+      delete rest['se_logo'];
+      await Promise.race([this.loadAssets(rest), initTimeout]);
+
       this.state = 'ready';
+      this.onReadyCallback?.();
+      this.onReadyCallback = null;
 
-      // BGM はバックグラウンドでロード（完了次第 pendingBGM を再生）
-      this.loadBgmAsync().catch(e => console.warn('[AudioService] BGM load failed:', e));
-
+      // ロード完了後に pending BGM があれば再生
+      if (this.pendingBGM) {
+        const pending = this.pendingBGM;
+        this.pendingBGM = null;
+        this.startBGM(pending);
+      }
     } catch (e) {
       console.warn('[AudioService] init failed or timed out:', e);
       this.state = 'error';
+      // エラーでもスプラッシュを閉じる（ゲームを止めない）
+      this.onReadyCallback?.();
+      this.onReadyCallback = null;
     }
   }
 
-  // iOS 旧仕様対応: decodeAudioData をコールバック・Promise 両対応のラッパーで呼ぶ
+  // iOS 旧仕様対応: decodeAudioData をコールバック・Promise 両対応ラッパーで呼ぶ
   private decodeAudioDataSafe(arrayBuffer: ArrayBuffer): Promise<AudioBuffer> {
     return new Promise((resolve, reject) => {
       if (!this.ctx) { reject(new Error('no ctx')); return; }
@@ -101,7 +126,6 @@ class AudioService {
           (decoded) => resolve(decoded),
           (err) => reject(err),
         );
-        // Promise を返す環境では catch をチェーンして未処理拒否を防ぐ
         if (result && typeof (result as any).then === 'function') {
           (result as Promise<AudioBuffer>).then(resolve).catch(reject);
         }
@@ -111,30 +135,24 @@ class AudioService {
     });
   }
 
-  private async loadAssets(assets: Record<string, string>): Promise<void> {
+  private async loadSingleAsset(key: string, url: string): Promise<void> {
     if (!this.ctx) return;
-    const promises = Object.entries(assets).map(async ([key, url]) => {
-      try {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const arrayBuffer = await response.arrayBuffer();
-        this.buffers[key] = await this.decodeAudioDataSafe(arrayBuffer);
-      } catch (e) {
-        console.warn(`[AudioService] load skipped: ${key}`, e);
-      }
-    });
-    await Promise.all(promises);
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const arrayBuffer = await response.arrayBuffer();
+      this.buffers[key] = await this.decodeAudioDataSafe(arrayBuffer);
+    } catch (e) {
+      console.warn(`[AudioService] load skipped: ${key}`, e);
+    }
   }
 
-  // BGM をバックグラウンドでロード（complete 後に pending があれば再生）
-  private async loadBgmAsync(): Promise<void> {
-    await this.loadAssets(this.BGM_ASSETS);
-    // ロード完了後に pending BGM があれば再生
-    if (this.pendingBGM && this.state === 'ready') {
-      const pending = this.pendingBGM;
-      this.pendingBGM = null;
-      this.startBGM(pending);
-    }
+  private async loadAssets(assets: Record<string, string>): Promise<void> {
+    if (!this.ctx) return;
+    const promises = Object.entries(assets).map(([key, url]) =>
+      this.loadSingleAsset(key, url)
+    );
+    await Promise.all(promises);
   }
 
   // --- 設定 ---
@@ -146,24 +164,20 @@ class AudioService {
     this.seEnabled = on;
     if (!on) {
       this.activeSESources.forEach(src => {
-        try { src.stop(0); } catch (_) { }
-        try { src.disconnect(); } catch (_) { }
+        try { src.stop(0); } catch (_) {}
+        try { src.disconnect(); } catch (_) {}
       });
       this.activeSESources.clear();
     }
   }
-  getBgmEnabled(): boolean { return this.bgmEnabled; }
-  getSeEnabled(): boolean { return this.seEnabled; }
+  getBgmEnabled(): boolean  { return this.bgmEnabled; }
+  getSeEnabled(): boolean   { return this.seEnabled; }
   getBgmIsPaused(): boolean { return this.bgmIsPaused; }
 
   // --- BGM ---
   startBGM(mode: 'title' | 'game') {
     if (!this.bgmEnabled) return;
-    if (this.state !== 'ready') {
-      // まだ準備中なら pending に積むだけ（init の再帰呼び出しは絶対しない）
-      this.pendingBGM = mode;
-      return;
-    }
+    if (this.state !== 'ready') { this.pendingBGM = mode; return; }
     if (this.currentBgmKey === mode && this.currentBgmSource && !this.bgmIsPaused) return;
     if (this.currentBgmKey !== mode) this.stopBGM();
     this.currentBgmKey = mode;
@@ -186,7 +200,7 @@ class AudioService {
       }
       this.currentBgmSource.stop(0);
       this.currentBgmSource.disconnect();
-    } catch (_) { }
+    } catch (_) {}
     this.currentBgmSource = null;
     this.bgmIsPaused = true;
   }
@@ -200,22 +214,22 @@ class AudioService {
 
   stopBGM() {
     if (this.currentBgmSource) {
-      try { this.currentBgmSource.stop(0); } catch (_) { }
-      try { this.currentBgmSource.disconnect(); } catch (_) { }
+      try { this.currentBgmSource.stop(0); } catch (_) {}
+      try { this.currentBgmSource.disconnect(); } catch (_) {}
       this.currentBgmSource = null;
     }
-    this.currentBgmKey = null;
-    this.pendingBGM = null;
+    this.currentBgmKey   = null;
+    this.pendingBGM      = null;
     this.bgmPausedOffset = 0;
-    this.bgmStartedAt = 0;
-    this.bgmIsPaused = false;
+    this.bgmStartedAt    = 0;
+    this.bgmIsPaused     = false;
   }
 
   stopAll() {
     this.stopBGM();
     this.activeSESources.forEach(src => {
-      try { src.stop(0); } catch (_) { }
-      try { src.disconnect(); } catch (_) { }
+      try { src.stop(0); } catch (_) {}
+      try { src.disconnect(); } catch (_) {}
     });
     this.activeSESources.clear();
   }
@@ -237,13 +251,14 @@ class AudioService {
   }
 
   // --- SE ---
-  // IMPORTANT: state が 'ready' 以外のときは再生しない（init() を呼ばない）
   private playSE(key: string) {
-    if (!this.seEnabled || this.state !== 'ready' || !this.ctx || !this.seGain) return;
+    if (!this.seEnabled || !this.ctx || !this.seGain) return;
+    // se_logo は state に関わらず再生を試みる（ロード直後に鳴らすため）
+    if (key !== 'se_logo' && this.state !== 'ready') return;
     try {
-      if (this.ctx.state === 'suspended') { this.ctx.resume().catch(() => { }); return; }
+      if (this.ctx.state === 'suspended') { this.ctx.resume().catch(() => {}); return; }
       const buffer = this.buffers[key];
-      if (!buffer) return; // バッファなしは無音で続行
+      if (!buffer) return;
       const source = this.ctx.createBufferSource();
       source.buffer = buffer;
       source.connect(this.seGain);
@@ -260,18 +275,18 @@ class AudioService {
     try {
       const rate = ratio > 0.5 ? 1.0 + (ratio - 0.5) * 0.3 : 1.0;
       this.currentBgmSource.playbackRate.setValueAtTime(Math.min(rate, 1.3), this.ctx.currentTime);
-    } catch (_) { }
+    } catch (_) {}
   }
 
-  playMove() { this.playSE('se_move'); }
-  playRotate() { this.playSE('se_rotate'); }
-  playLock() { this.playSE('se_lock'); }
-  playLockHeavy() { this.playSE('se_drop'); }
-  playHardDrop() { this.playSE('se_drop'); }
+  playMove()                    { this.playSE('se_move'); }
+  playRotate()                  { this.playSE('se_rotate'); }
+  playLock()                    { this.playSE('se_lock'); }
+  playLockHeavy()               { this.playSE('se_drop'); }
+  playHardDrop()                { this.playSE('se_drop'); }
   playLineClear(_lines: number) { this.playSE('se_clear'); }
-  playTSpin() { this.playSE('se_tspin'); }
-  playAllClear() { this.playSE('se_tspin'); }
-  playPause() { this.playSE('se_rotate'); }
+  playTSpin()                   { this.playSE('se_tspin'); }
+  playAllClear()                { this.playSE('se_tspin'); }
+  playPause()                   { this.playSE('se_rotate'); }
 
   playCombo(combo: number) {
     if (!this.seEnabled || this.state !== 'ready' || !this.ctx || !this.seGain) return;

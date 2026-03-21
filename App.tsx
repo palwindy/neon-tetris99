@@ -14,8 +14,9 @@ import Overlays from './components/ui/Overlays';
 import SettingsModal from './components/ui/SettingsModal';
 import TitleScreen from './components/ui/TitleScreen';
 import { MatchingScreen } from './components/vsmulti/MatchingScreen';
+import SplashScreen from './components/ui/SplashScreen';
 
-const version = "1.27";
+const version = "1.28";
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('title');
@@ -24,7 +25,10 @@ function App() {
   const [bgmOn, setBgmOn]                 = useState(true);
   const [seOn,  setSeOn]                  = useState(true);
   const [blinkDuration, setBlinkDuration] = useState('2s');
-  const [hasInteracted, setHasInteracted] = useState(false);
+  
+  // スプラッシュとオーディオ初期化の管理
+  const [showSplash, setShowSplash]       = useState(true);
+  const [audioReady, setAudioReady]       = useState(false);
 
   const {
     grid, activePiece, activeShape, position, ghostPosition,
@@ -46,10 +50,15 @@ function App() {
   const handleSeToggle  = (on: boolean) => { setSeOn(on);  audioService.setSeEnabled(on);  };
 
   useEffect(() => {
+    // 起動時に audioService にロード完了コールバックを設定
+    audioService.setOnReady(() => setAudioReady(true));
+  }, []);
+
+  useEffect(() => {
     if (currentScreen === 'matching') return;
 
     if (showTitle) {
-      if (hasInteracted) {
+      if (!showSplash && audioReady) {
         audioService.startBGM('title');
       }
     } else if (gameStarted && !gameOver && !isWinner) {
@@ -65,7 +74,7 @@ function App() {
     } else if (!gameOver && !isWinner) {
       audioService.stopBGM();
     }
-  }, [showTitle, currentScreen, gameStarted, paused, gameOver, isWinner, hasInteracted]);
+  }, [showTitle, showSplash, audioReady, currentScreen, gameStarted, paused, gameOver, isWinner]);
 
   // --- CPU blink ---
   useEffect(() => {
@@ -105,19 +114,17 @@ function App() {
     onResume: togglePause, onRetry: handleRetry, onQuitToTitle: handleQuitToTitle,
   };
 
-  const handleUserInteraction = () => {
-    if (!hasInteracted) {
-      setHasInteracted(true);
-      audioService.init();
-    }
-  };
-
   return (
-    <div 
-      className="h-[100dvh] bg-neutral-950 text-white overflow-hidden font-sans select-none touch-none"
-      onClick={handleUserInteraction}
-      onTouchStart={handleUserInteraction}
-    >
+    <div className="h-[100dvh] bg-neutral-950 text-white overflow-hidden font-sans select-none touch-none">
+
+      {/* スプラッシュ画面 */}
+      {showSplash && (
+        <SplashScreen 
+          onStart={() => audioService.init()} 
+          complete={audioReady} 
+          onDone={() => setShowSplash(false)} 
+        />
+      )}
 
       {/* Portrait Layout — z-0 でTitleScreen(z-100)より後ろに確実に置く */}
       <div className="w-full h-full flex flex-col items-center landscape:hidden relative z-0">
