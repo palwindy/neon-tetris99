@@ -16,9 +16,14 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onStart, complete, onDone }
 
   // complete フラグが立ったらフェードアウト開始
   useEffect(() => {
+    console.log(`[SplashScreen] Phase check: ${phase}, complete: ${complete}`);
     if (complete && phase === 'loading') {
+      console.log('[SplashScreen] Moving to fading phase');
       setPhase('fading');
-      const timer = setTimeout(onDone, 800); // フェードアウト時間
+      const timer = setTimeout(() => {
+        console.log('[SplashScreen] Calling onDone');
+        onDone();
+      }, 800); // フェードアウト時間
       return () => clearTimeout(timer);
     }
   }, [complete, phase, onDone]);

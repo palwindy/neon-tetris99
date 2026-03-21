@@ -16,7 +16,7 @@ import TitleScreen from './components/ui/TitleScreen';
 import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 import SplashScreen from './components/ui/SplashScreen';
 
-const version = "1.35";
+const version = "1.36";
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('title');
@@ -64,6 +64,7 @@ function App() {
 
   useEffect(() => {
     if (currentScreen === 'matching') return;
+    console.log(`[App] AudioEffect showTitle=${showTitle} showSplash=${showSplash} audioReady=${audioReady}`);
 
     if (showTitle) {
       if (audioReady) {
@@ -83,6 +84,20 @@ function App() {
       audioService.stopBGM();
     }
   }, [showTitle, showSplash, audioReady, currentScreen, gameStarted, paused, gameOver, isWinner]);
+
+  // バックアップ: audioReadyになってもスプラッシュが消えない場合の強制処理
+  useEffect(() => {
+    if (audioReady && showSplash) {
+      console.log("[App] Triggering fallback splash close timer");
+      const timer = setTimeout(() => {
+        if (showSplash) {
+          console.log("[App] Fallback splash close triggered");
+          setShowSplash(false);
+        }
+      }, 3000); // 3秒待っても消えなければ強制
+      return () => clearTimeout(timer);
+    }
+  }, [audioReady, showSplash]);
 
   // --- CPU blink ---
   useEffect(() => {
