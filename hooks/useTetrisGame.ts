@@ -16,7 +16,21 @@ const T99_REN_TABLE = [
   0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 5
 ];
 
-export const useTetrisGame = () => {
+export interface UseTetrisGameProps {
+    gameMode?: GameMode;
+    onGameOver?: () => void;
+    onLineClear?: (lines: number) => void;
+    onTSpin?: (lines: number) => void;
+    onAttackSent?: (lines: number) => void;
+}
+
+export const useTetrisGame = ({
+    gameMode: initialGameMode = 'SINGLE',
+    onGameOver,
+    onLineClear,
+    onTSpin,
+    onAttackSent
+}: UseTetrisGameProps = {}) => {
   const [grid, setGrid] = useState<Grid>(createGrid());
   const [activePiece, setActivePiece] = useState<TetrominoType>('T');
   const [activeShape, setActiveShape] = useState<number[][]>([]);
@@ -36,13 +50,14 @@ export const useTetrisGame = () => {
   const [gameMode, setGameMode] = useState<GameMode>('SINGLE');
   const [cpuHealth, setCpuHealth] = useState(100);
   const [isWinner, setIsWinner] = useState(false);
+  const [pendingGarbage, setPendingGarbage] = useState(0); // お邪魔予告ゲージ
+  const [lastAttackSent, setLastAttackSent] = useState(0); // エフェクト用などに保持
+  
   // CPU Attack Timing
   const [nextAttackTime, setNextAttackTime] = useState<number>(0);
   // Player Attack Event { damage, timestamp }
   const [playerAttack, setPlayerAttack] = useState<{ damage: number; id: number } | null>(null);
-  
-  // Pending Garbage (Accumulated attacks from CPU)
-  const [pendingGarbage, setPendingGarbage] = useState<number>(0);
+
 
   const [gameOver, setGameOver] = useState(false);
   const [paused, setPaused] = useState(false);
@@ -370,19 +385,45 @@ export const useTetrisGame = () => {
         else newBackToBack = false;
     }
 
-    // Damage Calculation
-    let damage = 0;
+    // --- Ver.2.00: Tetris 99 Attack Table ---
+    let attackLines = 0;
     if (linesCleared > 0) {
-        if (linesCleared === 1) damage += 2;
-        if (linesCleared === 2) damage += 5;
-        if (linesCleared === 3) damage += 10;
-        if (linesCleared === 4) damage += 20;
-        if (isTSpin) damage += 10;
-        if (isMini) damage -= 5; 
-        if (currentCombo > 0) damage += (currentCombo * 3);
-        if (isBackToBack && isDifficult) damage += 5;
-        if (isAllClear) damage += 50;
+        if (isTSpin) {
+            if (isMini) {
+                if (linesCleared === 1) attackLines = 0; // T-Spin Mini Single is 0 in T99
+                else if (linesCleared === 2) attackLines = 1;
+            } else {
+                if (linesCleared === 1) attackLines = 2;
+                else if (linesCleared === 2) attackLines = 4;
+                else if (linesCleared === 3) attackLines = 6;
+            }
+        } else {
+            if (linesCleared === 2) attackLines = 1;
+            else if (linesCleared === 3) attackLines = 2;
+            else if (linesCleared === 4) attackLines = 4;
+        }
+
+        // Back-to-Back Bonus
+        if (isBackToBack && isDifficult) attackLines += 1;
+
+        // Combo Bonus (T99 REN Table)
+        if (currentCombo >= 0) {
+            const tableIdx = Math.min(currentCombo + 1, T99_REN_TABLE.length - 1);
+            attackLines += T99_REN_TABLE[tableIdx];
+        }
+
+        if (isAllClear) attackLines += 4; // T99 standard is 4
     }
+
+    // CPU mode uses 'damage' variable, we'll map attackLines to it for backward compatibility
+    let damage = attackLines;
+    if (mode === 'CPU') {
+        // CPU mode originally had much higher damage (20 for Tetris), 
+        // We'll multiply T99 lines for a similar intensity in CPU mode or keep T99 scale.
+        // User asked for T99 spec, so we use T99 scale.
+        damage = attackLines; 
+    }
+    // ----------------------------------------
 
     if (fullRowsIndices.length > 0) {
         isClearingRef.current = true;
@@ -395,6 +436,32 @@ export const useTetrisGame = () => {
         const newCombo = currentCombo + 1;
         setCombo(newCombo);
         setBackToBack(newBackToBack);
+
+        // --- ATTACK / CANCEL LOGIC ---
+        if (attackLines > 0) {
+            setPendingGarbage(prev => {
+                let remain = attackLines;
+                let currentPending = prev;
+                // 相殺
+                if (currentPending > 0) {
+                    const cancelled = Math.min(remain, currentPending);
+                    remain -= cancelled;
+                    currentPending -= cancelled;
+                    console.log(`[Game] Attack ${attackLines} -> Cancelled ${cancelled}. Remaining pending: ${currentPending}`);
+                }
+                // 攻撃送信
+                if (remain > 0) {
+                    if (mode === 'MULTI' && onAttackSent) {
+                        onAttackSent(remain);
+                    }
+                    if (mode === 'CPU') {
+                        setLastAttackSent(remain);
+                    }
+                }
+                return currentPending;
+            });
+        }
+        // -----------------------------
 
         // CPU Damage Apply
         let dead = false;
@@ -484,7 +551,7 @@ export const useTetrisGame = () => {
                 
                 // --- APPLY PENDING GARBAGE HERE ---
                 const pending = gameStateRef.current.pendingGarbage;
-                if (pending > 0 && state.gameMode === 'CPU') {
+                if (pending > 0 && (state.gameMode === 'CPU' || state.gameMode === 'MULTI')) {
                      const result = addGarbageToGrid(newGrid, pending);
                      if (result.gameOver) {
                          setGameOver(true);
@@ -580,7 +647,7 @@ export const useTetrisGame = () => {
 
         // --- APPLY PENDING GARBAGE HERE (For no-clear lock) ---
         const pending = gameStateRef.current.pendingGarbage;
-        if (pending > 0 && mode === 'CPU') {
+        if (pending > 0 && (mode === 'CPU' || mode === 'MULTI')) {
              const result = addGarbageToGrid(tempGrid, pending);
              if (result.gameOver) {
                  setGrid(result.grid);
@@ -969,6 +1036,7 @@ useEffect(() => {
     quitGame,
     clearPlayerAttack,
     setGameOver,
-    setIsWinner
+    setIsWinner,
+    setPendingGarbage
   };
 };

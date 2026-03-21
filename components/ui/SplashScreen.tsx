@@ -7,12 +7,13 @@ interface SplashScreenProps {
 }
 
 const SplashScreen: React.FC<SplashScreenProps> = ({ onStart, complete, onDone }) => {
-  const [phase, setPhase] = useState<'waiting' | 'loading' | 'fading'>('loading');
+  const [phase, setPhase] = useState<'waiting' | 'loading' | 'fading'>('waiting');
 
-  useEffect(() => {
-    onStart();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const handleInteraction = () => {
+    if (phase !== 'waiting') return;
+    onStart(); // オーディオコンテキストの初期化などをキック
+    setPhase('loading');
+  };
 
   // complete フラグが立ったらフェードアウト開始
   useEffect(() => {
@@ -32,9 +33,11 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onStart, complete, onDone }
 
   return (
     <div
+      onClick={handleInteraction}
+      onTouchStart={handleInteraction}
       className={`
         fixed inset-0 z-[200] flex flex-col items-center justify-center
-        bg-white select-none
+        bg-white select-none cursor-pointer
         transition-opacity duration-700
         ${phase === 'fading' ? 'opacity-0 pointer-events-none' : 'opacity-100 pointer-events-auto'}
       `}
@@ -59,9 +62,17 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onStart, complete, onDone }
         </h2>
       </div>
 
-      {/* 状態テキスト */}
-      <div className="absolute bottom-12 right-16 text-right">
-        <LoadingDots />
+      {/* 状態テキスト / タップ誘導 */}
+      <div className="absolute bottom-16 w-full flex flex-col items-center">
+        {phase === 'waiting' ? (
+          <p className="text-gray-400 font-bold tracking-[0.4em] animate-pulse text-sm">
+            -- TAP START --
+          </p>
+        ) : (
+          <div className="flex flex-col items-end w-full max-w-sm pr-12">
+            <LoadingDots />
+          </div>
+        )}
       </div>
     </div>
   );

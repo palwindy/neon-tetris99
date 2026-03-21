@@ -1,6 +1,6 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Settings } from 'lucide-react';
+import { audioService } from '../../services/audioService';
 import { multiplayerService } from '../../services/multiplayerService';
 import { MultiPlayer } from '../../types';
 
@@ -11,6 +11,11 @@ interface MatchingScreenProps {
 }
 
 export const MatchingScreen: React.FC<MatchingScreenProps> = ({ onGameStart, onBack, onOpenSettings }) => {
+  const handleBack = () => {
+    audioService.playCancel();
+    onBack();
+  };
+
   const [players, setPlayers] = useState<MultiPlayer[]>([]);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [roomId, setRoomId] = useState(multiplayerService.getRoomId());
@@ -75,7 +80,7 @@ export const MatchingScreen: React.FC<MatchingScreenProps> = ({ onGameStart, onB
     >
       <div className="flex items-center justify-between px-4 py-3 shrink-0">
         <button 
-          onClick={onBack} 
+          onClick={handleBack} 
           disabled={countdown !== null}
           className={`p-1 transition-all ${countdown !== null ? 'opacity-0 scale-90 pointer-events-none' : 'text-gray-400 hover:text-white'}`}
         >

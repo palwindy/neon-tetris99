@@ -17,7 +17,7 @@ import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 import SplashScreen from './components/ui/SplashScreen';
 import { multiplayerService } from './services/multiplayerService';
 
-const version = "1.46";
+const version = "2.01";
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('title');
@@ -30,14 +30,20 @@ function App() {
   const [showSplash, setShowSplash]       = useState(true);
   const [audioReady, setAudioReady]       = useState(false);
 
+  const handleAttackSent = useCallback((lines: number) => {
+    multiplayerService.sendAttack(lines);
+  }, []);
+
   const {
     grid, activePiece, activeShape, position, ghostPosition,
     nextQueue, holdPiece, score, lines, level,
     gameOver, isWinner, paused, gameStarted, clearingRows, specialMessage,
     gameMode, cpuHealth, nextAttackTime, playerAttack, pendingGarbage,
     move, rotate, rotateCCW, hardDrop, hold, togglePause, resetGame, quitGame,
-    setIsWinner, setGameOver
-  } = useTetrisGame();
+    setIsWinner, setGameOver, setPendingGarbage
+  } = useTetrisGame({
+    onAttackSent: handleAttackSent
+  });
 
   const [multiPlayers, setMultiPlayers] = useState<MultiPlayer[]>([]);
 
@@ -134,6 +140,23 @@ function App() {
     return () => clearInterval(id);
   }, [nextAttackTime, gameStarted, gameMode, paused, isWinner]);
 
+  // --- Win/Loss Effects ---
+  useEffect(() => {
+    if (isWinner && audioService.getCurrentBGM() !== 'win') {
+      audioService.playWinStinger();
+      const timer = setTimeout(() => audioService.startBGM('win'), 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [isWinner]);
+
+  useEffect(() => {
+    if (gameOver && audioService.getCurrentBGM() !== 'lose') {
+      audioService.playLossStinger();
+      const timer = setTimeout(() => audioService.startBGM('lose'), 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [gameOver]);
+
   useEffect(() => {
     // MULTIモードでのみ動作。gameStartedが同時にfalseになるため!gameStartedガードは置かない
     if (gameMode !== 'MULTI') return;
@@ -159,6 +182,20 @@ function App() {
       setIsWinner(true);
     }
   }, [multiPlayers, gameOver, isWinner, gameStarted, gameMode, setIsWinner]);
+
+  // --- Attack Sync ---
+  useEffect(() => {
+    if (gameMode !== 'MULTI' || !gameStarted) return;
+    const myId = multiplayerService.getPlayerId();
+    const me = multiPlayers.find(p => p.id === myId);
+    
+    // Firebase側にお邪魔があればローカルに取り込んでFirebase側はリセット
+    if (me && me.pendingGarbage > 0) {
+      console.log(`[App] Incoming garbage from Firebase: ${me.pendingGarbage}`);
+      setPendingGarbage(prev => prev + me.pendingGarbage);
+      multiplayerService.resetPendingGarbage();
+    }
+  }, [multiPlayers, gameMode, gameStarted, setPendingGarbage]);
 
   // --- Navigation ---
   const handleStartGame = useCallback((mode: 'SINGLE' | 'CPU') => {
@@ -224,7 +261,7 @@ function App() {
         <div className="w-full h-full flex flex-col items-center landscape:hidden relative z-0">
           <div className="w-full max-w-lg px-4 py-1 flex justify-between items-center bg-neutral-900 border-b border-neutral-800 z-10 shrink-0 h-10">
             <div className="flex items-baseline">
-              <h1 className="text-sm font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">NEON 99</h1>
+              <h1 className="text-xs font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">NEON TETRIS 99</h1>
               <span className="text-xs text-gray-400 ml-2">v{version}</span>
             </div>
             <div className="flex gap-4 font-mono text-xs">
@@ -247,7 +284,19 @@ function App() {
               </div>
             </div>
 
-            <div className="relative shrink-0">
+            <div className="relative shrink-0 flex items-end">
+              {/* Garbage Gauge (Left) */}
+              <div className="absolute -left-3 bottom-0 w-1.5 bg-gray-900/60 rounded-full overflow-hidden border border-gray-800" style={{ height: 'calc(100% - 20px)' }}>
+                <div 
+                  className="absolute bottom-0 w-full transition-all duration-300"
+                  style={{ 
+                    height: `${Math.min(100, (pendingGarbage / 20) * 100)}%`,
+                    background: pendingGarbage > 10 ? 'linear-gradient(to top, #ff1744, #f44336)' : 'linear-gradient(to top, #ffea00, #ff9100)',
+                    boxShadow: pendingGarbage > 0 ? `0 0 10px ${pendingGarbage > 10 ? '#ff1744' : '#ffea00'}` : 'none'
+                  }}
+                />
+              </div>
+
               <TetrisBoard grid={grid} activeShape={activeShape} position={position} activePiece={activePiece} clearingRows={clearingRows} specialMessage={specialMessage} ghostPosition={ghostPosition} />
               <Overlays {...overlayProps} />
             </div>
@@ -282,7 +331,7 @@ function App() {
         <div className="hidden landscape:flex w-full h-full flex-row overflow-hidden relative z-0">
           <div className="flex-1 flex flex-col items-center justify-between pb-1 pt-2 gap-2 bg-gray-900/20 border-r border-gray-800/50 min-w-0">
             <div className="mt-2 flex items-baseline">
-              <h1 className="text-xs font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">NEON 99</h1>
+              <h1 className="text-xs font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">NEON TETRIS 99</h1>
               <span className="text-xs text-gray-500 ml-1.5">v{version}</span>
             </div>
             <div className="mb-2">
@@ -301,7 +350,19 @@ function App() {
               </ControlButton>
             </div>
 
-            <div className="relative h-[94vh] aspect-[1/2] shadow-2xl">
+            <div className="relative h-[94vh] aspect-[1/2] shadow-2xl flex items-end">
+              {/* Garbage Gauge (Left) */}
+              <div className="absolute -left-4 bottom-0 w-2 bg-gray-900/60 rounded-full overflow-hidden border border-gray-800" style={{ height: '100%' }}>
+                <div 
+                  className="absolute bottom-0 w-full transition-all duration-300"
+                  style={{ 
+                    height: `${Math.min(100, (pendingGarbage / 20) * 100)}%`,
+                    background: pendingGarbage > 10 ? 'linear-gradient(to top, #ff1744, #f44336)' : 'linear-gradient(to top, #ffea00, #ff9100)',
+                    boxShadow: pendingGarbage > 0 ? `0 0 15px ${pendingGarbage > 10 ? '#ff1744' : '#ffea00'}` : 'none'
+                  }}
+                />
+              </div>
+
               <TetrisBoard grid={grid} activeShape={activeShape} position={position} activePiece={activePiece} clearingRows={clearingRows} specialMessage={specialMessage} ghostPosition={ghostPosition} style={{ width: '100%', height: '100%' }} />
               <Overlays {...overlayProps} />
             </div>

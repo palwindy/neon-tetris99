@@ -1,6 +1,7 @@
 import React from 'react';
 import { Gamepad2, X, RotateCcw as ResetIcon, Music, Zap } from 'lucide-react';
 import { ControllerAction } from '../../types';
+import { audioService } from '../../services/audioService';
 
 interface SettingsModalProps {
   onClose: () => void;
@@ -19,17 +20,21 @@ interface SettingsModalProps {
 const SettingsModal: React.FC<SettingsModalProps> = ({
   onClose, bgmOn, seOn, onBgmToggle, onSeToggle,
   mapping, isRemapping, remapAction, startRemap, cancelRemap, resetMapping,
-}) => (
-  <div className="fixed inset-0 bg-neutral-950/95 flex flex-col items-center z-[120] p-4 animate-in fade-in duration-200">
-    <div className="w-full max-w-md flex flex-col h-full">
-      <div className="flex justify-between items-center mb-6 border-b border-gray-800 pb-2">
-        <h2 className="text-xl font-bold flex items-center gap-2 text-cyan-400">
-          <Gamepad2 /> Controller Settings
-        </h2>
-        <button onClick={onClose} className="p-2 hover:bg-gray-800 rounded-full">
-          <X className="text-gray-400" />
-        </button>
-      </div>
+}) => {
+  const handleClose = () => { audioService.playCancel(); onClose(); };
+  
+  return (
+    <div className="fixed inset-0 bg-neutral-950/95 flex flex-col items-center z-[120] p-4 animate-in fade-in duration-200">
+      <div className="w-full max-w-md flex flex-col h-full">
+        <div className="flex justify-between items-center mb-6 border-b border-gray-800 pb-2">
+          <h2 className="text-xl font-bold flex items-center gap-2 text-cyan-400">
+            <Gamepad2 /> Controller Settings
+          </h2>
+          <button onClick={handleClose} className="p-2 hover:bg-gray-800 rounded-full">
+            <X className="text-gray-400" />
+          </button>
+        </div>
+
 
       <div className="flex-1 overflow-y-auto space-y-2 pr-2">
         {/* Audio */}
@@ -78,12 +83,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         <button onClick={resetMapping} className="flex items-center gap-2 text-red-400 hover:text-red-300 text-sm px-4 py-2">
           <ResetIcon size={14} /> Reset Defaults
         </button>
-        <button onClick={onClose} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-6 rounded-full">
+        <button onClick={handleClose} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-6 rounded-full">
           Done
         </button>
       </div>
     </div>
   </div>
 );
+};
 
 export default SettingsModal;

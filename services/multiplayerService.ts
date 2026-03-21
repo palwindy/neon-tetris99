@@ -9,7 +9,8 @@ import {
   remove, 
   serverTimestamp, 
   get,
-  Unsubscribe
+  Unsubscribe,
+  runTransaction
 } from 'firebase/database';
 
 const STORAGE_KEY = 'neon-tetris-room';
@@ -85,7 +86,8 @@ class MultiplayerService {
       id: this.playerId,
       name: this.playerName,
       status: 'found',
-      isHost: false
+      isHost: false,
+      pendingGarbage: 0
     };
 
     onDisconnect(playerRef).remove();
@@ -130,6 +132,35 @@ class MultiplayerService {
     
     const playerRef = ref(db, `rooms/${this.roomId}/players/${this.playerId}`);
     update(playerRef, { status });
+  }
+
+  async sendAttack(lines: number) {
+    if (!this.roomId || lines <= 0) return;
+    const playersRef = ref(db, `rooms/${this.roomId}/players`);
+    
+    try {
+      const snapshot = await get(playersRef);
+      if (!snapshot.exists()) return;
+      
+      const players = snapshot.val();
+      const opponentId = Object.keys(players).find(id => id !== this.playerId);
+      
+      if (opponentId) {
+        const opponentGarbageRef = ref(db, `rooms/${this.roomId}/players/${opponentId}/pendingGarbage`);
+        await runTransaction(opponentGarbageRef, (currentValue) => {
+          return (currentValue || 0) + lines;
+        });
+        console.log(`[MultiplayerService] Sent ${lines} lines of garbage to ${opponentId}`);
+      }
+    } catch (e) {
+      console.error("[MultiplayerService] sendAttack failed:", e);
+    }
+  }
+
+  async resetPendingGarbage() {
+    if (!this.roomId) return;
+    const playerRef = ref(db, `rooms/${this.roomId}/players/${this.playerId}`);
+    await update(playerRef, { pendingGarbage: 0 });
   }
 
   async leaveRoom() {

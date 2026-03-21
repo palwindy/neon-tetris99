@@ -26,7 +26,7 @@ class AudioService {
 
   private buffers: Record<string, AudioBuffer> = {};
   private state: 'idle' | 'loading' | 'ready' | 'error' = 'idle';
-  private pendingBGM: 'title' | 'game' | 'win' | null = null;
+  private pendingBGM: 'title' | 'game' | 'win' | 'lose' | null = null;
   private onReadyCallback: (() => void) | null = null;
 
   private readonly ALL_ASSETS: Record<string, string> = {
@@ -41,6 +41,14 @@ class AudioService {
     bgm_title:   '/assets/bgm_title.ogg?v=1.35',
     bgm_game:    '/assets/bgm_game.ogg?v=1.35',
     bgm_win:     '/assets/Result (Win).ogg?v=1.44',
+    bgm_lose:    '/assets/Result (lose).ogg?v=2.05',
+    bgm_clear:   '/assets/bgm_clear.ogg?v=2.05',
+    bgm_loss:    '/assets/bgm_gameover.ogg?v=2.05',
+    se_ok:       '/assets/se_ok.ogg?v=2.04',
+    se_cancel:   '/assets/se_cancel.ogg?v=2.04',
+    se_pause:    '/assets/se_pause.ogg?v=2.05',
+    se_tetris:   '/assets/se_tetris.ogg?v=2.05',
+    se_perfect:  '/assets/se_perfect.ogg?v=2.05',
   };
 
   /** ロード完了時に呼ぶコールバックを登録する */
@@ -173,7 +181,7 @@ class AudioService {
   getBgmIsPaused(): boolean { return this.bgmIsPaused; }
 
   // --- BGM ---
-  startBGM(mode: 'title' | 'game' | 'win') {
+  startBGM(mode: 'title' | 'game' | 'win' | 'lose') {
     if (!this.bgmEnabled) return;
     if (this.state !== 'ready') { 
       this.pendingBGM = mode; 
@@ -182,7 +190,12 @@ class AudioService {
     if (this.currentBgmKey === mode && this.currentBgmSource && !this.bgmIsPaused) return;
     if (this.currentBgmKey !== mode) this.stopBGM();
     this.currentBgmKey = mode;
-    const bufferKey = mode === 'title' ? 'bgm_title' : mode === 'game' ? 'bgm_game' : 'bgm_win';
+    let bufferKey = '';
+    if (mode === 'title') bufferKey = 'bgm_title';
+    else if (mode === 'game') bufferKey = 'bgm_game';
+    else if (mode === 'win') bufferKey = 'bgm_win';
+    else if (mode === 'lose') bufferKey = 'bgm_lose';
+    
     const buffer = this.buffers[bufferKey];
     if (buffer) {
       this._playBGMBuffer(buffer, 0);
@@ -204,6 +217,10 @@ class AudioService {
     } catch (_) {}
     this.currentBgmSource = null;
     this.bgmIsPaused = true;
+  }
+
+  getCurrentBGM() {
+    return this.currentBgmKey as 'title' | 'game' | 'win' | 'lose' | null;
   }
 
   resumeBGM() {
@@ -294,10 +311,24 @@ class AudioService {
   playLock()                    { this.playSE('se_lock'); }
   playLockHeavy()               { this.playSE('se_drop'); }
   playHardDrop()                { this.playSE('se_drop'); }
-  playLineClear(_lines: number) { this.playSE('se_clear'); }
-  playTSpin()                   { this.playSE('se_tspin'); }
-  playAllClear()                { this.playSE('se_tspin'); }
-  playPause()                   { this.playSE('se_rotate'); }
+  playPause()                   { this.playSE('se_pause'); }
+  playOk()                      { this.playSE('se_ok'); }
+  playCancel()                  { this.playSE('se_cancel'); }
+  playLineClear(lines: number) { 
+    if (lines === 4) this.playSE('se_tetris');
+    else this.playSE('se_clear'); 
+  }
+  playAllClear()                { this.playSE('se_perfect'); }
+
+  playWinStinger() {
+    this.stopAll();
+    this.playSE('bgm_clear'); // BGM扱いだが使い勝手のためSEとして鳴らす
+  }
+
+  playLossStinger() {
+    this.stopAll();
+    this.playSE('bgm_loss');
+  }
 
   playCombo(combo: number) {
     if (!this.seEnabled || this.state !== 'ready' || !this.ctx || !this.seGain) return;
