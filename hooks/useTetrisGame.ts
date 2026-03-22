@@ -490,6 +490,9 @@ export const useTetrisGame = ({
 
             damage = cpuBase;
 
+            // Normal Single Clear Buff (New Spec v2.15)
+            if (!isTSpin && linesCleared === 1) damage = 1;
+
             // Back-to-Back Bonus (Double)
             if (isBackToBack && isDifficult) damage += 2;
 
@@ -580,33 +583,33 @@ export const useTetrisGame = ({
                 playedSound = true;
             } else {
                 if (isTSpin) {
-                    const prefix = isMini ? "T-SPIN MINI" : "T-SPIN";
-                    const suffix = ["", " SINGLE", " DOUBLE", " TRIPLE"][linesCleared] || "";
+                    const prefix = isMini ? "T-SPIN ミニ" : "T-SPIN";
+                    const suffix = ["", " シングル", " ダブル", " トリプル"][linesCleared] || "";
                     msg = `${prefix}${suffix}`;
                     audioService.playTSpin();
                     playedSound = true;
                 } else if (linesCleared === 4) {
-                    msg = "TETRIS";
+                    msg = "テトリス";
                     audioService.playLineClear(4);
                     playedSound = true;
                 }
 
                 if (isBackToBack && isDifficult) {
-                    msg = `BACK TO BACK\n${msg}`;
+                    msg = `バックトゥバック\n${msg}`;
                 }
 
                 if (newCombo > 0) {
-                    msg += `\nREN ${newCombo}`;
+                    msg += `\n${newCombo} 連`;
                 }
             }
 
             if (damage > 0 && mode === 'CPU') {
-               msg = `DMG ${damage}\n${msg}`;
+               msg = `ダメ ${damage}\n${msg}`;
             }
             
             if (!playedSound) {
                 if (newCombo > 0) {
-                    if (!msg) msg = `REN ${newCombo}`;
+                    if (!msg) msg = `${newCombo} 連`;
                     audioService.playCombo(newCombo);
                 } else {
                     audioService.playLineClear(linesCleared);
@@ -641,7 +644,7 @@ export const useTetrisGame = ({
                      setPendingGarbage(0);
                      gameStateRef.current.pendingGarbage = 0; // Sync ref
 
-                     setSpecialMessage(`${pending} lines added!`);
+                     setSpecialMessage(`${pending} 行追加！`);
                      setTimeout(() => setSpecialMessage(null), 800);
                      audioService.playMove(); // Sound for receiving garbage
                 }
@@ -736,7 +739,7 @@ export const useTetrisGame = ({
              setPendingGarbage(0);
              gameStateRef.current.pendingGarbage = 0; // Sync ref
 
-             setSpecialMessage(`${pending} lines added!`);
+             setSpecialMessage(`${pending} 行追加！`);
              setTimeout(() => setSpecialMessage(null), 800);
              audioService.playMove(); // Sound for receiving garbage
         }
