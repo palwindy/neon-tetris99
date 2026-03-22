@@ -16,6 +16,11 @@ const T99_REN_TABLE = [
   0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 5
 ];
 
+// VS CPU REN (Combo) Attack Table (New Spec)
+const CPU_REN_TABLE = [
+  0, 1, 2, 2, 4, 4, 6, 6, 8, 8, 8, 10
+];
+
 export interface UseTetrisGameProps {
     gameMode?: GameMode;
     onGameOver?: () => void;
@@ -435,10 +440,13 @@ export const useTetrisGame = ({
 
     // --- Ver.2.00: Tetris 99 Attack Table ---
     let attackLines = 0;
+    let damage = 0;
+
     if (linesCleared > 0) {
+        // Standard T99 Attack Table (for MULTI and Countering)
         if (isTSpin) {
             if (isMini) {
-                if (linesCleared === 1) attackLines = 0; // T-Spin Mini Single is 0 in T99
+                if (linesCleared === 1) attackLines = 0; 
                 else if (linesCleared === 2) attackLines = 1;
             } else {
                 if (linesCleared === 1) attackLines = 2;
@@ -460,16 +468,42 @@ export const useTetrisGame = ({
             attackLines += T99_REN_TABLE[tableIdx];
         }
 
-        if (isAllClear) attackLines += 4; // T99 standard is 4
-    }
+        if (isAllClear) attackLines += 4;
 
-    // CPU mode uses 'damage' variable, we'll map attackLines to it for backward compatibility
-    let damage = attackLines;
-    if (mode === 'CPU') {
-        // CPU mode originally had much higher damage (20 for Tetris), 
-        // We'll multiply T99 lines for a similar intensity in CPU mode or keep T99 scale.
-        // User asked for T99 spec, so we use T99 scale.
-        damage = attackLines; 
+        // --- VS CPU Specific Damage (New Spec v2.14) ---
+        if (mode === 'CPU') {
+            let cpuBase = 0;
+            if (isTSpin) {
+                if (isMini) {
+                    if (linesCleared === 1) cpuBase = 1; // New Spec 0 -> 1
+                    else if (linesCleared === 2) cpuBase = 2; // Double
+                } else {
+                    if (linesCleared === 1) cpuBase = 4; // Double
+                    else if (linesCleared === 2) cpuBase = 8; // Double
+                    else if (linesCleared === 3) cpuBase = 12; // Double
+                }
+            } else {
+                if (linesCleared === 2) cpuBase = 2; // Double
+                else if (linesCleared === 3) cpuBase = 4; // Double
+                else if (linesCleared === 4) cpuBase = 8; // Double
+            }
+
+            damage = cpuBase;
+
+            // Back-to-Back Bonus (Double)
+            if (isBackToBack && isDifficult) damage += 2;
+
+            // REN (Combo) Bonus (New Spec Table)
+            if (currentCombo >= 0) {
+                const tableIdx = Math.min(currentCombo + 1, CPU_REN_TABLE.length - 1);
+                damage += CPU_REN_TABLE[tableIdx];
+            }
+
+            if (isAllClear) damage += 8; // Double
+        } else {
+            // MULTI or SINGLE mode
+            damage = attackLines;
+        }
     }
     // ----------------------------------------
 
