@@ -17,7 +17,7 @@ import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 import SplashScreen from './components/ui/SplashScreen';
 import { multiplayerService } from './services/multiplayerService';
 
-const version = "2.16";
+const version = "2.17";
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('title');
