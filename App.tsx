@@ -17,7 +17,7 @@ import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 import SplashScreen from './components/ui/SplashScreen';
 import { multiplayerService } from './services/multiplayerService';
 
-const version = "2.24";
+const version = "2.25";
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('title');
@@ -365,7 +365,7 @@ function App() {
           </div>
 
           <div className="shrink-0 h-full flex items-center justify-center gap-2 px-2">
-            <div className="flex flex-col items-center gap-2 w-12">
+            <div className="flex flex-col items-center gap-2 w-12 h-[94vh] pt-4">
               <div className="text-[8px] text-gray-500 font-bold">HOLD</div>
               <div className="w-12 h-12 bg-black border-2 border-gray-700 rounded flex items-center justify-center">
                 <MiniPieceIcon type={holdPiece} />
