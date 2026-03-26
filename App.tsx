@@ -18,7 +18,7 @@ import SplashScreen from './components/ui/SplashScreen';
 import { multiplayerService } from './services/multiplayerService';
 import { MiniOpponentBoard } from './components/game/MiniOpponentBoard';
 
-const version = "2.26";
+const version = "2.27";
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('title');
@@ -302,36 +302,39 @@ function App() {
           </div>
 
           <div className="flex-1 w-full max-w-lg flex items-start justify-center pt-2 pb-0 gap-1 min-h-0 relative">
-            <div className="flex flex-col items-center justify-start pt-4 w-16">
-              <div className="text-[10px] text-gray-500 font-bold mb-1">HOLD</div>
-              <div className="w-14 h-14 bg-black border-2 border-gray-700 rounded flex items-center justify-center">
-                <MiniPieceIcon type={holdPiece} />
-              </div>
-              <div className="mt-8">
-                <ControlButton onClick={togglePause} className="w-10 h-10 rounded-full border border-gray-600 bg-gray-800 text-gray-400 active:bg-gray-700 flex items-center justify-center" cooldown={200}>
-                  {paused ? <Play size={16} /> : <Pause size={16} />}
-                </ControlButton>
+            <div className="flex flex-col items-center justify-between pt-4 pb-4 w-16 h-full relative">
+              <div className="flex flex-col items-center">
+                {/* Garbage Gauge (Left of HOLD) */}
+                <div className="absolute -left-1 bottom-0 w-1 bg-gray-900/60 rounded-full overflow-hidden border border-gray-800" style={{ height: 'calc(100% - 20px)' }}>
+                  <div 
+                    className="absolute bottom-0 w-full transition-all duration-300"
+                    style={{ 
+                      height: `${Math.min(100, (pendingGarbage / 20) * 100)}%`,
+                      background: pendingGarbage > 10 ? 'linear-gradient(to top, #ff1744, #f44336)' : 'linear-gradient(to top, #ffea00, #ff9100)',
+                      boxShadow: pendingGarbage > 0 ? `0 0 10px ${pendingGarbage > 10 ? '#ff1744' : '#ffea00'}` : 'none'
+                    }}
+                  />
+                </div>
+
+                <div className="text-[10px] text-gray-500 font-bold mb-1">HOLD</div>
+                <div className="w-14 h-14 bg-black border-2 border-gray-700 rounded flex items-center justify-center relative">
+                  <MiniPieceIcon type={holdPiece} />
+                </div>
+                <div className="mt-8">
+                  <ControlButton onClick={togglePause} className="w-10 h-10 rounded-full border border-gray-600 bg-gray-800 text-gray-400 active:bg-gray-700 flex items-center justify-center" cooldown={200}>
+                    {paused ? <Play size={16} /> : <Pause size={16} />}
+                  </ControlButton>
+                </div>
               </div>
 
               {gameMode === 'MULTI' && gameStarted && (
-                <div className="mt-12">
+                <div className="mb-4">
                   <MiniOpponentBoard opponent={gameOpponent} />
                 </div>
               )}
             </div>
 
             <div className="relative shrink-0 flex items-start">
-              {/* Garbage Gauge (Left) */}
-              <div className="absolute -left-3 bottom-0 w-1.5 bg-gray-900/60 rounded-full overflow-hidden border border-gray-800" style={{ height: 'calc(100% - 20px)' }}>
-                <div 
-                  className="absolute bottom-0 w-full transition-all duration-300"
-                  style={{ 
-                    height: `${Math.min(100, (pendingGarbage / 20) * 100)}%`,
-                    background: pendingGarbage > 10 ? 'linear-gradient(to top, #ff1744, #f44336)' : 'linear-gradient(to top, #ffea00, #ff9100)',
-                    boxShadow: pendingGarbage > 0 ? `0 0 10px ${pendingGarbage > 10 ? '#ff1744' : '#ffea00'}` : 'none'
-                  }}
-                />
-              </div>
 
               <TetrisBoard grid={grid} activeShape={activeShape} position={position} activePiece={activePiece} clearingRows={clearingRows} specialMessage={specialMessage} ghostPosition={ghostPosition} countdownValue={countdownValue} />
               <Overlays {...overlayProps} />
@@ -376,34 +379,37 @@ function App() {
           </div>
 
           <div className="shrink-0 h-full flex items-center justify-center gap-2 px-2">
-            <div className="flex flex-col items-center gap-2 w-12 h-[94vh] pt-4">
-              <div className="text-[8px] text-gray-500 font-bold">HOLD</div>
-              <div className="w-12 h-12 bg-black border-2 border-gray-700 rounded flex items-center justify-center">
-                <MiniPieceIcon type={holdPiece} />
+            <div className="flex flex-col items-center justify-between pt-4 pb-4 w-12 h-[94vh] relative">
+              <div className="flex flex-col items-center">
+                {/* Garbage Gauge (Left of HOLD) */}
+                <div className="absolute -left-1 bottom-0 w-1.5 bg-gray-900/60 rounded-full overflow-hidden border border-gray-800" style={{ height: '100%' }}>
+                  <div 
+                    className="absolute bottom-0 w-full transition-all duration-300"
+                    style={{ 
+                      height: `${Math.min(100, (pendingGarbage / 20) * 100)}%`,
+                      background: pendingGarbage > 10 ? 'linear-gradient(to top, #ff1744, #f44336)' : 'linear-gradient(to top, #ffea00, #ff9100)',
+                      boxShadow: pendingGarbage > 0 ? `0 0 15px ${pendingGarbage > 10 ? '#ff1744' : '#ffea00'}` : 'none'
+                    }}
+                  />
+                </div>
+
+                <div className="text-[8px] text-gray-500 font-bold">HOLD</div>
+                <div className="w-12 h-12 bg-black border-2 border-gray-700 rounded flex items-center justify-center">
+                  <MiniPieceIcon type={holdPiece} />
+                </div>
+                <ControlButton onClick={togglePause} className="w-8 h-8 mt-2 rounded-full border border-gray-600 bg-gray-800 text-gray-400 active:bg-gray-700 flex items-center justify-center" cooldown={200}>
+                  {paused ? <Play size={12} /> : <Pause size={12} />} 
+                </ControlButton>
               </div>
-              <ControlButton onClick={togglePause} className="w-8 h-8 mt-2 rounded-full border border-gray-600 bg-gray-800 text-gray-400 active:bg-gray-700 flex items-center justify-center" cooldown={200}>
-                {paused ? <Play size={12} /> : <Pause size={12} />} 
-              </ControlButton>
 
               {gameMode === 'MULTI' && gameStarted && (
-                <div className="mt-8">
+                <div className="mb-4">
                   <MiniOpponentBoard opponent={gameOpponent} />
                 </div>
               )}
             </div>
 
             <div className="relative h-[94vh] aspect-[1/2] shadow-2xl flex items-start">
-              {/* Garbage Gauge (Left) */}
-              <div className="absolute -left-4 bottom-0 w-2 bg-gray-900/60 rounded-full overflow-hidden border border-gray-800" style={{ height: '100%' }}>
-                <div 
-                  className="absolute bottom-0 w-full transition-all duration-300"
-                  style={{ 
-                    height: `${Math.min(100, (pendingGarbage / 20) * 100)}%`,
-                    background: pendingGarbage > 10 ? 'linear-gradient(to top, #ff1744, #f44336)' : 'linear-gradient(to top, #ffea00, #ff9100)',
-                    boxShadow: pendingGarbage > 0 ? `0 0 15px ${pendingGarbage > 10 ? '#ff1744' : '#ffea00'}` : 'none'
-                  }}
-                />
-              </div>
 
               <TetrisBoard grid={grid} activeShape={activeShape} position={position} activePiece={activePiece} clearingRows={clearingRows} specialMessage={specialMessage} ghostPosition={ghostPosition} countdownValue={countdownValue} className="w-full h-full" style={{ width: '100%', height: '100%' }} />
               <Overlays {...overlayProps} />
