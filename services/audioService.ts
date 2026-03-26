@@ -47,8 +47,11 @@ class AudioService {
     se_ok:       '/assets/se_ok.ogg?v=2.04',
     se_cancel:   '/assets/se_cancel.ogg?v=2.04',
     se_pause:    '/assets/se_pause.ogg?v=2.05',
-    se_tetris:   '/assets/se_tetris.ogg?v=2.05',
-    se_perfect:  '/assets/se_perfect.ogg?v=2.05',
+    se_single:   '/assets/se_single.ogg?v=2.18',
+    se_double:   '/assets/se_double.ogg?v=2.18',
+    se_triple:   '/assets/se_triple.ogg?v=2.18',
+    se_hold:     '/assets/se_hold.ogg?v=2.18',
+    se_harddrop: '/assets/se_harddrop.ogg?v=2.18',
     se_ready:    '/assets/se_redy.ogg?v=2.12',
     se_count:    '/assets/se_count.ogg?v=2.12',
     se_go:       '/assets/se_Go.ogg?v=2.12',
@@ -99,7 +102,8 @@ class AudioService {
 
       // se_logo だけ先に読み込んで即再生
       await this.loadSingleAsset('se_logo', this.ALL_ASSETS['se_logo']);
-      this.playSE('se_logo');
+      // Fallback: se_logo が無ければ無視
+      if (this.buffers['se_logo']) this.playSE('se_logo');
 
       // 残りアセットをすべてロード（タイムアウト付き）
       const rest: Record<string, string> = { ...this.ALL_ASSETS };
@@ -310,16 +314,19 @@ class AudioService {
   }
 
   playMove()                    { this.playSE('se_move'); }
+  playHold()                    { this.playSE('se_hold'); }
   playRotate()                  { this.playSE('se_rotate'); }
-  playLock()                    { this.playSE('se_lock'); }
-  playLockHeavy()               { this.playSE('se_drop'); }
-  playHardDrop()                { this.playSE('se_drop'); }
+  playLock()                    { /* Sound removed (silent) per v2.18 */ }
+  playLockHeavy()               { /* Sound removed (silent) per v2.18 */ }
+  playHardDrop()                { this.playSE('se_harddrop'); }
   playPause()                   { this.playSE('se_pause'); }
   playOk()                      { this.playSE('se_ok'); }
   playCancel()                  { this.playSE('se_cancel'); }
   playLineClear(lines: number) { 
     if (lines === 4) this.playSE('se_tetris');
-    else this.playSE('se_clear'); 
+    else if (lines === 3) this.playSE('se_triple');
+    else if (lines === 2) this.playSE('se_double');
+    else if (lines === 1) this.playSE('se_single');
   }
   playTSpin()                   { this.playSE('se_rotate'); }
   playAllClear()                { this.playSE('se_perfect'); }
@@ -337,10 +344,15 @@ class AudioService {
     this.playSE('bgm_loss');
   }
 
-  playCombo(combo: number) {
+  playCombo(combo: number, lines: number = 1) {
     if (!this.seEnabled || this.state !== 'ready' || !this.ctx || !this.seGain) return;
     try {
-      const buffer = this.buffers['se_clear'];
+      let key = 'se_single';
+      if (lines === 4) key = 'se_tetris';
+      else if (lines === 3) key = 'se_triple';
+      else if (lines === 2) key = 'se_double';
+
+      const buffer = this.buffers[key];
       if (!buffer) return;
       const source = this.ctx.createBufferSource();
       source.buffer = buffer;

@@ -610,7 +610,7 @@ export const useTetrisGame = ({
             if (!playedSound) {
                 if (newCombo > 0) {
                     if (!msg) msg = `REN ${newCombo}`;
-                    audioService.playCombo(newCombo);
+                    audioService.playCombo(newCombo, linesCleared);
                 } else {
                     audioService.playLineClear(linesCleared);
                 }
@@ -917,7 +917,7 @@ export const useTetrisGame = ({
       }
     }
     setCanHold(false);
-    audioService.playMove();
+    audioService.playHold();
   }, [holdPiece, canHold, gameOver, paused, gameStarted, getNextFromQueue, isWinner]);
 
   const moveRef = useRef(move);
