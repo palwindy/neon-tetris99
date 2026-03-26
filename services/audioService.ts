@@ -40,6 +40,7 @@ class AudioService {
     se_gameover: '/assets/se_gameover.ogg?v=1.35',
     bgm_title:   '/assets/bgm_title.ogg?v=1.35',
     bgm_game:    '/assets/bgm_game.ogg?v=1.35',
+    bgm_cpuHP20: '/assets/bgm_cpuHP20.ogg?v=2.20',
     bgm_win:     '/assets/Result (Win).ogg?v=1.44',
     bgm_lose:    '/assets/Result (lose).ogg?v=2.05',
     bgm_clear:   '/assets/bgm_clear.ogg?v=2.05',
@@ -188,14 +189,14 @@ class AudioService {
   getBgmIsPaused(): boolean { return this.bgmIsPaused; }
 
   // --- BGM ---
-  startBGM(mode: 'title' | 'game' | 'win' | 'lose') {
+  startBGM(mode: 'title' | 'game' | 'win' | 'lose', offset: number = 0, pitch: number = 1.0) {
     if (!this.bgmEnabled) return;
     if (this.state !== 'ready') { 
       this.pendingBGM = mode; 
       return; 
     }
-    if (this.currentBgmKey === mode && this.currentBgmSource && !this.bgmIsPaused) return;
-    if (this.currentBgmKey !== mode) this.stopBGM();
+    if (this.currentBgmKey === mode && this.currentBgmSource && !this.bgmIsPaused && pitch === 1.0) return;
+    if (this.currentBgmKey !== mode || pitch !== 1.0) this.stopBGM();
     this.currentBgmKey = mode;
     let bufferKey = '';
     if (mode === 'title') bufferKey = 'bgm_title';
@@ -205,7 +206,7 @@ class AudioService {
     
     const buffer = this.buffers[bufferKey];
     if (buffer) {
-      this._playBGMBuffer(buffer, 0);
+      this._playBGMBuffer(buffer, offset, pitch);
     } else {
       console.warn('[AudioService] BGM buffer not found:', bufferKey);
     }
@@ -266,7 +267,7 @@ class AudioService {
     this.activeSESources.clear();
   }
 
-  private _playBGMBuffer(buffer: AudioBuffer, offset: number = 0) {
+  private _playBGMBuffer(buffer: AudioBuffer, offset: number = 0, pitch: number = 1.0) {
     if (!this.ctx || !this.bgmGain) return;
     try {
       if (this.ctx.state === 'suspended') {
@@ -275,6 +276,7 @@ class AudioService {
       const source = this.ctx.createBufferSource();
       source.buffer = buffer;
       source.loop = true;
+      source.playbackRate.value = pitch;
       source.connect(this.bgmGain);
       source.start(0, offset % buffer.duration);
       this.currentBgmSource = source;
@@ -325,7 +327,7 @@ class AudioService {
 
   playMove()                    { this.playSE('se_move'); }
   playHold()                    { this.playSE('se_hold'); }
-  playRotate()                  { this.playSE('se_rotate', 2.0); } // v2.19: 音量2倍に強化
+  playRotate()                  { this.playSE('se_rotate', 4.0); } // v2.20: さらに2倍(計4倍)に強化
   playLock()                    { /* Sound removed (silent) per v2.18 */ }
   playLockHeavy()               { /* Sound removed (silent) per v2.18 */ }
   playHardDrop()                { this.playSE('se_harddrop'); }
@@ -338,7 +340,7 @@ class AudioService {
     else if (lines === 2) this.playSE('se_double');
     else if (lines === 1) this.playSE('se_single');
   }
-  playTSpin()                   { this.playSE('se_rotate', 2.5); } // T-Spin時はさらに強調
+  playTSpin()                   { this.playSE('se_rotate', 5.0); } // T-Spin時はさらに強調 (v2.20)
   playAllClear()                { this.playSE('se_perfect'); }
   playReady()                   { this.playSE('se_ready'); }
   playCountdown()               { this.playSE('se_count'); }
@@ -379,6 +381,16 @@ class AudioService {
   playGameOver() {
     this.stopAll();
     this.playSE('se_gameover');
+  }
+
+  playCpuDangerStinger() {
+    this.stopBGM();
+    this.playSE('bgm_cpuHP20');
+    // ジングルの終了を待つ時間を考慮してBGMを再開
+    setTimeout(() => {
+        const state = (this as any).currentScreen; // 簡易的なチェック (App.tsx側で制御するほうが安全だが、時間差再生を優先)
+        this.startBGM('game', 1.0, 1.1); // 1.0秒目から再生、1.1倍ピッチ
+    }, 1500);
   }
 }
 

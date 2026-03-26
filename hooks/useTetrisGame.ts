@@ -126,6 +126,7 @@ export const useTetrisGame = ({
   // T-Spin tracking
   const lastMoveWasRotate = useRef(false);
   const lastKickIndex = useRef(0);
+  const cpuDangerPlayedRef = useRef(false);
 
   const lockStartTimeRef = useRef<number | null>(null);
   const hardDropLockedRef = useRef(false);
@@ -553,6 +554,13 @@ export const useTetrisGame = ({
         if (mode === 'CPU') {
             const nextHealth = Math.max(0, health - damage);
             setCpuHealth(nextHealth);
+            gameStateRef.current.cpuHealth = nextHealth; // Sync ref
+
+            // --- v2.20 CPU Danger BGM Sequence ---
+            if (nextHealth <= 20 && !cpuDangerPlayedRef.current && nextHealth > 0) {
+                cpuDangerPlayedRef.current = true;
+                audioService.playCpuDangerStinger();
+            }
             
             // Trigger Attack Effect
             setPlayerAttack({ damage, id: Date.now() });
@@ -986,6 +994,7 @@ useEffect(() => {
     setNextAttackTime(0);
     setPendingGarbage(0); // Reset pending garbage
     remainingAttackTimeRef.current = 0; // Reset CPU attack timer ref
+    cpuDangerPlayedRef.current = false; // Reset danger flag
 
     isClearingRef.current = false;
     isLockingRef.current = false;
