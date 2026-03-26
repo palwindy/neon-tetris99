@@ -286,9 +286,9 @@ class AudioService {
   }
 
   // --- SE ---
-  private playSE(key: string) {
+  private playSE(key: string, volumeScale: number = 1.0) {
     if (!this.seEnabled || !this.ctx || !this.seGain) return;
-    // se_logo は state に関わらず再生を試みる（ロード直後に鳴らすため）
+    // se_logo は state に関わらず再生を試める（ロード直後に鳴らすため）
     if (key !== 'se_logo' && this.state !== 'ready') return;
     try {
       if (this.ctx.state === 'suspended') { this.ctx.resume().catch(() => {}); return; }
@@ -296,8 +296,18 @@ class AudioService {
       if (!buffer) return;
       const source = this.ctx.createBufferSource();
       source.buffer = buffer;
-      source.connect(this.seGain);
-      source.onended = () => this.activeSESources.delete(source);
+
+      // 独自のゲインノードを作成して音量を調整
+      const gainNode = this.ctx.createGain();
+      gainNode.gain.value = volumeScale;
+      
+      source.connect(gainNode);
+      gainNode.connect(this.seGain);
+      
+      source.onended = () => {
+        this.activeSESources.delete(source);
+        gainNode.disconnect();
+      };
       this.activeSESources.add(source);
       source.start(0);
     } catch (e) {
@@ -315,7 +325,7 @@ class AudioService {
 
   playMove()                    { this.playSE('se_move'); }
   playHold()                    { this.playSE('se_hold'); }
-  playRotate()                  { this.playSE('se_rotate'); }
+  playRotate()                  { this.playSE('se_rotate', 2.0); } // v2.19: 音量2倍に強化
   playLock()                    { /* Sound removed (silent) per v2.18 */ }
   playLockHeavy()               { /* Sound removed (silent) per v2.18 */ }
   playHardDrop()                { this.playSE('se_harddrop'); }
@@ -328,7 +338,7 @@ class AudioService {
     else if (lines === 2) this.playSE('se_double');
     else if (lines === 1) this.playSE('se_single');
   }
-  playTSpin()                   { this.playSE('se_rotate'); }
+  playTSpin()                   { this.playSE('se_rotate', 2.5); } // T-Spin時はさらに強調
   playAllClear()                { this.playSE('se_perfect'); }
   playReady()                   { this.playSE('se_ready'); }
   playCountdown()               { this.playSE('se_count'); }

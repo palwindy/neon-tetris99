@@ -587,7 +587,7 @@ export const useTetrisGame = ({
                     const suffix = ["", " SINGLE", " DOUBLE", " TRIPLE"][linesCleared] || "";
                     msg = `${prefix}${suffix}`;
                     audioService.playTSpin();
-                    playedSound = true;
+                    // playedSound = true; // v2.19: ライン消去音も鳴らしたいので、ここでは true にしない
                 } else if (linesCleared === 4) {
                     msg = "TETRIS";
                     audioService.playLineClear(4);
