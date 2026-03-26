@@ -10,8 +10,9 @@ interface BoardProps {
   clearingRows: number[];
   specialMessage: string | null;
   ghostPosition: Position;
-  countdownValue?: number | string | null; // Add this
-  style?: React.CSSProperties; 
+  countdownValue?: number | string | null;
+  style?: React.CSSProperties;
+  className?: string;
 }
 
 const TetrisBoard: React.FC<BoardProps> = ({ 
@@ -23,7 +24,8 @@ const TetrisBoard: React.FC<BoardProps> = ({
   specialMessage,
   ghostPosition,
   countdownValue,
-  style
+  style,
+  className
 }) => {
   // Merge active piece and ghost piece into grid for rendering (without locking)
   const displayGrid = useMemo(() => {
@@ -74,7 +76,7 @@ const TetrisBoard: React.FC<BoardProps> = ({
   }, [grid, activeShape, position, activePiece, clearingRows, ghostPosition]);
 
   return (
-    <div className="bg-gray-900 border-2 border-gray-700 p-1 rounded-lg shadow-[0_0_20px_rgba(0,0,0,0.5)] relative overflow-hidden shrink-0">
+    <div className={`bg-gray-900 border-2 border-gray-700 p-1 rounded-lg shadow-[0_0_20px_rgba(0,0,0,0.5)] relative overflow-hidden shrink-0${className ? ' ' + className : ''}`}>
       
       {/* Special Message Overlay */}
       {specialMessage && (

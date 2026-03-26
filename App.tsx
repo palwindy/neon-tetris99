@@ -17,7 +17,7 @@ import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 import SplashScreen from './components/ui/SplashScreen';
 import { multiplayerService } from './services/multiplayerService';
 
-const version = "2.22";
+const version = "2.23";
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('title');
@@ -330,7 +330,7 @@ function App() {
               <div className="flex flex-col items-center">
                 <div className="text-[10px] text-gray-500 font-bold mb-1">NEXT</div>
                 <div className="flex flex-col gap-1">
-                  {[activePiece, ...nextQueue].slice(0, 3).map((type, i) => <NextQueueItem key={i} type={type} index={i} />)}
+                  {nextQueue.slice(0, 3).map((type, i) => <NextQueueItem key={i} type={type} index={i} />)}
                 </div>
               </div>
               {gameMode === 'CPU' && gameStarted && (
@@ -388,7 +388,7 @@ function App() {
                 />
               </div>
 
-              <TetrisBoard grid={grid} activeShape={activeShape} position={position} activePiece={activePiece} clearingRows={clearingRows} specialMessage={specialMessage} ghostPosition={ghostPosition} style={{ width: '100%', height: '100%' }} />
+              <TetrisBoard grid={grid} activeShape={activeShape} position={position} activePiece={activePiece} clearingRows={clearingRows} specialMessage={specialMessage} ghostPosition={ghostPosition} countdownValue={countdownValue} className="w-full h-full" style={{ width: '100%', height: '100%' }} />
               <Overlays {...overlayProps} />
             </div>
 
