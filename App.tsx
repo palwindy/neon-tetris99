@@ -17,7 +17,7 @@ import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 import SplashScreen from './components/ui/SplashScreen';
 import { multiplayerService } from './services/multiplayerService';
 
-const version = "2.23";
+const version = "2.24";
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('title');
@@ -396,7 +396,7 @@ function App() {
               <div className="flex flex-col items-center gap-2">
                 <div className="text-[8px] text-gray-500 font-bold">NEXT</div>
                 <div className="flex flex-col gap-1">
-                  {[activePiece, ...nextQueue].slice(0, 3).map((type, i) => <NextQueueItem key={i} type={type} index={i} />)}
+                  {nextQueue.slice(0, 3).map((type, i) => <NextQueueItem key={i} type={type} index={i} />)}
                 </div>
               </div>
               {gameMode === 'CPU' && gameStarted && (
