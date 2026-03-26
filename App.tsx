@@ -17,7 +17,7 @@ import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 import SplashScreen from './components/ui/SplashScreen';
 import { multiplayerService } from './services/multiplayerService';
 
-const version = "2.21";
+const version = "2.22";
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('title');
@@ -309,7 +309,7 @@ function App() {
               </div>
             </div>
 
-            <div className="relative shrink-0 flex items-end">
+            <div className="relative shrink-0 flex items-start">
               {/* Garbage Gauge (Left) */}
               <div className="absolute -left-3 bottom-0 w-1.5 bg-gray-900/60 rounded-full overflow-hidden border border-gray-800" style={{ height: 'calc(100% - 20px)' }}>
                 <div 
@@ -330,7 +330,7 @@ function App() {
               <div className="flex flex-col items-center">
                 <div className="text-[10px] text-gray-500 font-bold mb-1">NEXT</div>
                 <div className="flex flex-col gap-1">
-                  {nextQueue.slice(0, 3).map((type, i) => <NextQueueItem key={i} type={type} index={i} />)}
+                  {[activePiece, ...nextQueue].slice(0, 3).map((type, i) => <NextQueueItem key={i} type={type} index={i} />)}
                 </div>
               </div>
               {gameMode === 'CPU' && gameStarted && (
@@ -375,7 +375,7 @@ function App() {
               </ControlButton>
             </div>
 
-            <div className="relative h-[94vh] aspect-[1/2] shadow-2xl flex items-end">
+            <div className="relative h-[94vh] aspect-[1/2] shadow-2xl flex items-start">
               {/* Garbage Gauge (Left) */}
               <div className="absolute -left-4 bottom-0 w-2 bg-gray-900/60 rounded-full overflow-hidden border border-gray-800" style={{ height: '100%' }}>
                 <div 
@@ -396,7 +396,7 @@ function App() {
               <div className="flex flex-col items-center gap-2">
                 <div className="text-[8px] text-gray-500 font-bold">NEXT</div>
                 <div className="flex flex-col gap-1">
-                  {nextQueue.slice(0, 3).map((type, i) => <NextQueueItem key={i} type={type} index={i} />)}
+                  {[activePiece, ...nextQueue].slice(0, 3).map((type, i) => <NextQueueItem key={i} type={type} index={i} />)}
                 </div>
               </div>
               {gameMode === 'CPU' && gameStarted && (
