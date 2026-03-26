@@ -57,6 +57,7 @@ export interface MultiPlayer {
   status: MultiPlayerStatus;
   isHost: boolean;
   pendingGarbage: number;
+  matrix?: string;
 }
 
 export interface MultiRoomState {

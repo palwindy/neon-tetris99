@@ -134,6 +134,24 @@ class MultiplayerService {
     update(playerRef, { status });
   }
 
+  async sendMatrix(grid: import('../types').Grid) {
+    if (!this.roomId) return;
+    
+    let matrixStr = '';
+    for (let y = 0; y < grid.length; y++) {
+      for (let x = 0; x < grid[y].length; x++) {
+        matrixStr += grid[y][x].filled ? '1' : '0';
+      }
+    }
+
+    const playerRef = ref(db, `rooms/${this.roomId}/players/${this.playerId}`);
+    try {
+      await update(playerRef, { matrix: matrixStr });
+    } catch (e) {
+      console.error("[MultiplayerService] sendMatrix failed:", e);
+    }
+  }
+
   async sendAttack(lines: number) {
     if (!this.roomId || lines <= 0) return;
     const playersRef = ref(db, `rooms/${this.roomId}/players`);

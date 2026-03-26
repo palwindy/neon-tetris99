@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useTetrisGame } from './hooks/useTetrisGame';
 import { useGameInput } from './hooks/useGameInput';
 import TetrisBoard from './components/TetrisBoard';
@@ -16,8 +16,9 @@ import TitleScreen from './components/ui/TitleScreen';
 import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 import SplashScreen from './components/ui/SplashScreen';
 import { multiplayerService } from './services/multiplayerService';
+import { MiniOpponentBoard } from './components/game/MiniOpponentBoard';
 
-const version = "2.25";
+const version = "2.26";
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('title');
@@ -56,6 +57,12 @@ function App() {
   });
 
   const [multiPlayers, setMultiPlayers] = useState<MultiPlayer[]>([]);
+
+  const gameOpponent = useMemo(() => {
+    if (gameMode !== 'MULTI') return undefined;
+    const myId = multiplayerService.getPlayerId();
+    return multiPlayers.find(p => p.id !== myId);
+  }, [multiPlayers, gameMode]);
 
   const { mapping, isRemapping, remapAction, startRemap, cancelRemap, resetMapping } = useGameInput(
     { move, rotate, rotateCCW, hardDrop, hold, togglePause },
@@ -169,10 +176,8 @@ function App() {
     // MULTIモードでのみ動作。gameStartedが同時にfalseになるため!gameStartedガードは置かない
     if (gameMode !== 'MULTI') return;
 
-    const myId = multiplayerService.getPlayerId();
-
     // 相手の状態を監視
-    const opponent = multiPlayers.find(p => p.id !== myId);
+    const opponent = gameOpponent;
     
     if (multiPlayers.length > 1) {
       // ログが多すぎないよう、相手がdefeatedになった時か初回のみ出すのが理想だがデバッグのため継続
@@ -307,6 +312,12 @@ function App() {
                   {paused ? <Play size={16} /> : <Pause size={16} />}
                 </ControlButton>
               </div>
+
+              {gameMode === 'MULTI' && gameStarted && (
+                <div className="mt-12">
+                  <MiniOpponentBoard opponent={gameOpponent} />
+                </div>
+              )}
             </div>
 
             <div className="relative shrink-0 flex items-start">
@@ -373,6 +384,12 @@ function App() {
               <ControlButton onClick={togglePause} className="w-8 h-8 mt-2 rounded-full border border-gray-600 bg-gray-800 text-gray-400 active:bg-gray-700 flex items-center justify-center" cooldown={200}>
                 {paused ? <Play size={12} /> : <Pause size={12} />} 
               </ControlButton>
+
+              {gameMode === 'MULTI' && gameStarted && (
+                <div className="mt-8">
+                  <MiniOpponentBoard opponent={gameOpponent} />
+                </div>
+              )}
             </div>
 
             <div className="relative h-[94vh] aspect-[1/2] shadow-2xl flex items-start">

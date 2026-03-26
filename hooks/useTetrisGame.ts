@@ -10,6 +10,7 @@ import {
 } from '../constants';
 import { createGrid, checkCollision, rotateMatrix, rotateMatrixCCW, getTetrominoBag, addGarbageToGrid } from '../utils/gameHelpers';
 import { audioService } from '../services/audioService';
+import { multiplayerService } from '../services/multiplayerService';
 
 // Tetris 99 REN (Combo) Attack Table
 const T99_REN_TABLE = [
@@ -1007,6 +1008,12 @@ useEffect(() => {
     }, 50); 
     return () => clearInterval(lockCheck);
   }, [gameStarted, paused, gameOver, isWinner, clearingRows.length]); 
+  // --- Sync Grid to Firebase in MULTI mode ---
+  useEffect(() => {
+    if (gameMode === 'MULTI') {
+      multiplayerService.sendMatrix(grid);
+    }
+  }, [grid, gameMode]);
 
   const resetGame = (mode?: GameMode, autoStart: boolean = true) => {
     setGameStarted(false); // 一旦停止させる
