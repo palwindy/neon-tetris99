@@ -317,11 +317,10 @@ class AudioService {
     }
   }
 
-  setDangerLevel(ratio: number) {
+  setBgmPitch(rate: number) {
     if (!this.currentBgmSource || !this.ctx) return;
     try {
-      const rate = ratio > 0.5 ? 1.0 + (ratio - 0.5) * 0.3 : 1.0;
-      this.currentBgmSource.playbackRate.setValueAtTime(Math.min(rate, 1.3), this.ctx.currentTime);
+      this.currentBgmSource.playbackRate.setValueAtTime(rate, this.ctx.currentTime);
     } catch (_) {}
   }
 

@@ -127,6 +127,7 @@ export const useTetrisGame = ({
   const lastMoveWasRotate = useRef(false);
   const lastKickIndex = useRef(0);
   const cpuDangerPlayedRef = useRef(false);
+  const currentBgmPitchRef = useRef(1.0);
 
   const lockStartTimeRef = useRef<number | null>(null);
   const hardDropLockedRef = useRef(false);
@@ -704,7 +705,20 @@ export const useTetrisGame = ({
                         break;
                     }
                 }
-                audioService.setDangerLevel((BOARD_HEIGHT - highestRow) / BOARD_HEIGHT);
+                const heightRatio = (BOARD_HEIGHT - highestRow) / BOARD_HEIGHT;
+                let targetPitch = currentBgmPitchRef.current;
+                
+                if (mode === 'CPU' && gameStateRef.current.cpuHealth <= 20) {
+                    targetPitch = 1.1;
+                } else {
+                    if (heightRatio >= 0.8) targetPitch = 1.1;
+                    else if (heightRatio <= 0.6) targetPitch = 1.0;
+                }
+
+                if (targetPitch !== currentBgmPitchRef.current) {
+                    currentBgmPitchRef.current = targetPitch;
+                    audioService.setBgmPitch(targetPitch);
+                }
 
                 const { next, remainingQueue } = getNextFromQueue(state.nextQueue);
                 spawnPiece(next, remainingQueue, newGrid);
@@ -764,7 +778,26 @@ export const useTetrisGame = ({
                 break;
             }
         }
-        audioService.setDangerLevel((BOARD_HEIGHT - highestRow) / BOARD_HEIGHT);
+        const heightRatio = (BOARD_HEIGHT - highestRow) / BOARD_HEIGHT;
+        let targetPitch = currentBgmPitchRef.current;
+        
+        // 1. CPU HP <= 20 は最優先で 1.1倍固定
+        if (mode === 'CPU' && gameStateRef.current.cpuHealth <= 20) {
+            targetPitch = 1.1;
+        } else {
+            // 2. ミノの高さによる判定
+            if (heightRatio >= 0.8) {
+                targetPitch = 1.1;
+            } else if (heightRatio <= 0.6) {
+                targetPitch = 1.0;
+            }
+            // 60%〜80%の間は現在のピッチを維持（チャタリング防止）
+        }
+
+        if (targetPitch !== currentBgmPitchRef.current) {
+            currentBgmPitchRef.current = targetPitch;
+            audioService.setBgmPitch(targetPitch);
+        }
 
         const { next, remainingQueue } = getNextFromQueue(gameStateRef.current.nextQueue);
         spawnPiece(next, remainingQueue, finalGrid);
@@ -995,12 +1028,13 @@ useEffect(() => {
     setPendingGarbage(0); // Reset pending garbage
     remainingAttackTimeRef.current = 0; // Reset CPU attack timer ref
     cpuDangerPlayedRef.current = false; // Reset danger flag
+    currentBgmPitchRef.current = 1.0;
 
     isClearingRef.current = false;
     isLockingRef.current = false;
     lockStartTimeRef.current = null;
     hardDropLockedRef.current = false;
-    audioService.setDangerLevel(0);
+    audioService.setBgmPitch(1.0);
 
     const initialBag = [...getTetrominoBag(), ...getTetrominoBag()];
     const firstPiece = initialBag.shift()!;
@@ -1072,7 +1106,7 @@ useEffect(() => {
     setBackToBack(false);
     setSpecialMessage(null);
     setPendingGarbage(0);
-    audioService.setDangerLevel(0);
+    audioService.setBgmPitch(1.0);
     audioService.stopBGM();
   };
 
