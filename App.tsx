@@ -1,36 +1,30 @@
-import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useTetrisGame } from './hooks/useTetrisGame';
 import { useGameInput } from './hooks/useGameInput';
-import TetrisBoard from './components/TetrisBoard';
-import { ControlButton } from './components/Button';
-import { Pause, Play } from 'lucide-react';
+import { useAppAudio } from './hooks/useAppAudio';
+import { useMultiSync } from './hooks/useMultiSync';
+import { useCountdown } from './hooks/useCountdown';
 import { audioService } from './services/audioService';
-import { MultiPlayer } from './types';
+import { multiplayerService } from './services/multiplayerService';
+import { MultiPlayer, GameMode } from './types';
 
-import { NextQueueItem, MiniPieceIcon } from './components/game/PieceDisplay';
-import { DPad, ActionButtons } from './components/game/Controller';
-import { CpuStatusDisplay } from './components/game/CpuStatus';
+import { PortraitLayout } from './components/game/PortraitLayout';
+import { LandscapeLayout } from './components/game/LandscapeLayout';
 import Overlays from './components/ui/Overlays';
 import SettingsModal from './components/ui/SettingsModal';
 import TitleScreen from './components/ui/TitleScreen';
 import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 import SplashScreen from './components/ui/SplashScreen';
-import { multiplayerService } from './services/multiplayerService';
-import { MiniOpponentBoard } from './components/game/MiniOpponentBoard';
 
-const version = "2.27";
+const version = "3.00";
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('title');
-  const [showTitle, setShowTitle]         = useState(true);
-  const [showSettings, setShowSettings]   = useState(false);
-  const [bgmOn, setBgmOn]                 = useState(true);
-  const [seOn,  setSeOn]                  = useState(true);
-  const [blinkDuration, setBlinkDuration] = useState('2s');
-  
-  const [showSplash, setShowSplash]       = useState(true);
-  const [audioReady, setAudioReady]       = useState(false);
+  const [showTitle,    setShowTitle]    = useState(true);
+  const [showSplash,   setShowSplash]   = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
 
+  // --- ゲームコア ---
   const handleAttackSent = useCallback((lines: number) => {
     multiplayerService.sendAttack(lines);
   }, []);
@@ -50,19 +44,11 @@ function App() {
     move, rotate, rotateCCW, hardDrop, hold, togglePause, resetGame, startGame, quitGame,
     triggerFinishAnimation, isFinishing,
     isCountdown, setIsCountdown, countdownValue, setCountdownValue,
-    setIsWinner, setGameOver, setPendingGarbage
+    setIsWinner, setGameOver, setPendingGarbage,
   } = useTetrisGame({
     onAttackSent: handleAttackSent,
-    onFinishingStarted: handleFinishingStarted
+    onFinishingStarted: handleFinishingStarted,
   });
-
-  const [multiPlayers, setMultiPlayers] = useState<MultiPlayer[]>([]);
-
-  const gameOpponent = useMemo(() => {
-    if (gameMode !== 'MULTI') return undefined;
-    const myId = multiplayerService.getPlayerId();
-    return multiPlayers.find(p => p.id !== myId);
-  }, [multiPlayers, gameMode]);
 
   const { mapping, isRemapping, remapAction, startRemap, cancelRemap, resetMapping } = useGameInput(
     { move, rotate, rotateCCW, hardDrop, hold, togglePause },
@@ -71,82 +57,24 @@ function App() {
     gameOver,
   );
 
-  // --- Audio ---
-  const handleBgmToggle = (on: boolean) => { setBgmOn(on); audioService.setBgmEnabled(on); };
-  const handleSeToggle  = (on: boolean) => { setSeOn(on);  audioService.setSeEnabled(on);  };
+  // --- 抽出フック ---
+  const { bgmOn, seOn, audioReady, handleBgmToggle, handleSeToggle } = useAppAudio({
+    showTitle, showSplash, currentScreen,
+    gameStarted, paused, gameOver, isWinner,
+    togglePause, setShowSplash,
+  });
 
-  useEffect(() => {
-    audioService.setOnReady(() => setAudioReady(true));
-    // マルチプレイのグローバル監視
-    multiplayerService.addListener(setMultiPlayers);
-    return () => multiplayerService.removeListener(setMultiPlayers);
-  }, []);
+  const { gameOpponent } = useMultiSync({
+    gameMode, gameStarted, gameOver, isWinner,
+    currentScreen, isFinishing, triggerFinishAnimation, setPendingGarbage,
+  });
 
-  const handleSplashDone = useCallback(() => {
-    setShowSplash(false);
-  }, []);
+  const { runCountdownSequence } = useCountdown({
+    resetGame, startGame, setIsCountdown, setCountdownValue,
+  });
 
-  const handleAudioInit = useCallback(() => {
-    audioService.init();
-  }, []);
-
-  useEffect(() => {
-    if (showTitle || currentScreen === 'matching') {
-      if (audioReady) audioService.startBGM('title');
-    } else if (gameStarted && !gameOver && !isWinner) {
-      if (paused) {
-        audioService.pauseBGM?.();
-      } else {
-        if (audioService.getBgmIsPaused?.()) {
-          audioService.resumeBGM?.();
-        } else {
-          audioService.startBGM('game');
-        }
-      }
-    } else if (isWinner) {
-      audioService.startBGM('win');
-    } else if (!gameOver && !isWinner) {
-      audioService.stopBGM();
-    }
-  }, [showTitle, showSplash, audioReady, currentScreen, gameStarted, paused, gameOver, isWinner]);
-
-  useEffect(() => {
-    if (audioReady && showSplash) {
-      const timer = setTimeout(() => {
-        if (showSplash) setShowSplash(false);
-      }, 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [audioReady, showSplash]);
-
-  // --- Page Visibility / Focus ---
-  useEffect(() => {
-    const handleInactivate = () => {
-      audioService.pauseBGM();
-      if (currentScreen === 'game' && gameStarted && !gameOver && !isWinner && !paused) {
-        togglePause();
-      }
-    };
-    const handleActivate = () => {
-      if (showTitle || (currentScreen === 'game' && !paused)) {
-        audioService.resumeBGM();
-      }
-    };
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') handleInactivate();
-      else handleActivate();
-    };
-    window.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('blur', handleInactivate);
-    window.addEventListener('focus', handleActivate);
-    return () => {
-      window.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('blur', handleInactivate);
-      window.removeEventListener('focus', handleActivate);
-    };
-  }, [currentScreen, gameStarted, gameOver, isWinner, paused, showTitle, togglePause]);
-
-  // --- CPU blink ---
+  // --- CPU 攻撃タイミング点滅 ---
+  const [blinkDuration, setBlinkDuration] = useState('2s');
   useEffect(() => {
     if (!gameStarted || gameMode !== 'CPU' || paused || isWinner) return;
     const id = setInterval(() => {
@@ -157,79 +85,7 @@ function App() {
     return () => clearInterval(id);
   }, [nextAttackTime, gameStarted, gameMode, paused, isWinner]);
 
-  // --- Win/Loss Effects ---
-  useEffect(() => {
-    if (isWinner && audioService.getCurrentBGM() !== 'win') {
-      const timer = setTimeout(() => audioService.startBGM('win'), 1800);
-      return () => clearTimeout(timer);
-    }
-  }, [isWinner]);
-
-  useEffect(() => {
-    if (gameOver && audioService.getCurrentBGM() !== 'lose') {
-      const timer = setTimeout(() => audioService.startBGM('lose'), 1800);
-      return () => clearTimeout(timer);
-    }
-  }, [gameOver]);
-
-  useEffect(() => {
-    // MULTIモードでのみ動作。gameStartedが同時にfalseになるため!gameStartedガードは置かない
-    if (gameMode !== 'MULTI') return;
-
-    // 相手の状態を監視
-    const opponent = gameOpponent;
-    
-    if (multiPlayers.length > 1) {
-      // ログが多すぎないよう、相手がdefeatedになった時か初回のみ出すのが理想だがデバッグのため継続
-      // console.log(`[App] MultiPlay Status: Me=${myId}, Opponent=${opponent?.id}, OppStatus=${opponent?.status}`);
-    }
-
-    if (opponent && opponent.status === 'defeated' && !gameOver && !isWinner && gameStarted && currentScreen === 'game' && !isFinishing) {
-      console.log(`[App] Opponent ${opponent.id} defeated. Triggering win animation.`);
-      triggerFinishAnimation('win');
-    }
-  }, [multiPlayers, gameOver, isWinner, gameStarted, gameMode, currentScreen, isFinishing, triggerFinishAnimation]);
-
-  // --- Attack Sync ---
-  useEffect(() => {
-    if (gameMode !== 'MULTI' || !gameStarted) return;
-    const myId = multiplayerService.getPlayerId();
-    const me = multiPlayers.find(p => p.id === myId);
-    
-    // Firebase側にお邪魔があればローカルに取り込んでFirebase側はリセット
-    if (me && me.pendingGarbage > 0) {
-      console.log(`[App] Incoming garbage from Firebase: ${me.pendingGarbage}`);
-      setPendingGarbage(prev => prev + me.pendingGarbage);
-      multiplayerService.resetPendingGarbage();
-    }
-  }, [multiPlayers, gameMode, gameStarted, setPendingGarbage]);
-
-  const runCountdownSequence = useCallback(async (mode: any) => {
-    setIsCountdown(true);
-    setCountdownValue('READY');
-    resetGame(mode, false); // 表示はするが落下はさせない
-    audioService.stopBGM();
-    audioService.playReady();
-
-    await new Promise(r => setTimeout(r, 1200));
-
-    for (let i = 3; i >= 1; i--) {
-      setCountdownValue(i);
-      audioService.playCountdown();
-      await new Promise(r => setTimeout(r, 1000));
-    }
-
-    setCountdownValue('GO!');
-    audioService.playGo();
-    startGame(); // 落下開始のみ行う
-    // BGMはApp.tsxのuseEffect(gameStarted)で自動開始されるはず
-
-    await new Promise(r => setTimeout(r, 800));
-    setCountdownValue(null);
-    setIsCountdown(false);
-  }, [resetGame, setIsCountdown, setCountdownValue]);
-
-  // --- Navigation ---
+  // --- 画面遷移ハンドラ ---
   const handleStartGame = useCallback((mode: 'SINGLE' | 'CPU') => {
     setShowTitle(false);
     setCurrentScreen('game');
@@ -237,7 +93,7 @@ function App() {
   }, [runCountdownSequence]);
 
   const handleMultiplayerGameStart = useCallback((_roomId: string, _players: MultiPlayer[]) => {
-    setCurrentScreen('game'); 
+    setCurrentScreen('game');
     multiplayerService.updateStatus('playing');
     runCountdownSequence('MULTI');
   }, [runCountdownSequence]);
@@ -251,201 +107,52 @@ function App() {
   }, [gameMode, quitGame]);
 
   const handleRetry = useCallback(() => {
-    audioService.stopAll(); 
+    audioService.stopAll();
     if (gameMode === 'MULTI') {
       multiplayerService.updateStatus('found');
       setCurrentScreen('matching');
-      // 重要: マルチ時は自動開始せずにリセットのみ（カウントダウン待機）
       resetGame('MULTI', false);
     } else {
       runCountdownSequence(gameMode);
     }
   }, [gameMode, runCountdownSequence, resetGame]);
 
+  // --- レイアウト共通 props ---
   const overlayProps = {
     playerAttack, gameOver, isWinner, paused, gameStarted, score,
     bgmOn, seOn, onBgmToggle: handleBgmToggle, onSeToggle: handleSeToggle,
     onResume: togglePause, onRetry: handleRetry, onQuitToTitle: handleQuitToTitle,
   };
 
-  const handleGlobalInteraction = () => {
-    audioService.tryResumeContext();
+  const layoutProps = {
+    version,
+    grid, activeShape, position, activePiece, clearingRows, specialMessage, ghostPosition, countdownValue,
+    nextQueue, holdPiece,
+    score, lines, level,
+    gameMode, gameStarted, paused,
+    cpuHealth, blinkDuration,
+    pendingGarbage, gameOpponent,
+    move, hardDrop, rotate, rotateCCW, hold, togglePause,
+    overlayProps,
   };
 
   return (
-    <div 
+    <div
       className="h-[100dvh] bg-neutral-950 text-white overflow-hidden font-sans select-none touch-none"
-      onClick={handleGlobalInteraction}
-      onTouchStart={handleGlobalInteraction}
+      onClick={() => audioService.tryResumeContext()}
+      onTouchStart={() => audioService.tryResumeContext()}
     >
       {showSplash && (
-        <SplashScreen 
-          onStart={handleAudioInit} 
-          complete={audioReady} 
-          onDone={handleSplashDone} 
+        <SplashScreen
+          onStart={() => audioService.init()}
+          complete={audioReady}
+          onDone={() => setShowSplash(false)}
         />
       )}
 
-      {/* Portrait Layout */}
-      {!showSplash && (
-        <div className="w-full h-full flex flex-col items-center landscape:hidden relative z-0">
-          <div className="w-full max-w-lg px-4 py-1 flex justify-between items-center bg-neutral-900 border-b border-neutral-800 z-10 shrink-0 h-10">
-            <div className="flex items-baseline">
-              <h1 className="text-xs font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">NEON TETRIS 99</h1>
-              <span className="text-xs text-gray-400 ml-2">v{version}</span>
-            </div>
-            <div className="flex gap-4 font-mono text-xs">
-              <div>LVL <span className="text-yellow-400">{level}</span></div>
-              <div>LINES <span className="text-green-400">{lines}</span></div>
-              <div>SCORE <span className="text-white">{score}</span></div>
-            </div>
-          </div>
+      {!showSplash && <PortraitLayout  {...layoutProps} />}
+      {!showSplash && <LandscapeLayout {...layoutProps} />}
 
-          <div className="flex-1 w-full max-w-lg flex items-start justify-center pt-2 pb-0 gap-1 min-h-0 relative">
-            <div className="flex flex-col items-center justify-between pt-4 pb-4 w-16 h-full relative">
-              <div className="flex flex-col items-center">
-                {/* Garbage Gauge (Left of HOLD) */}
-                <div className="absolute -left-1 bottom-0 w-1 bg-gray-900/60 rounded-full overflow-hidden border border-gray-800" style={{ height: 'calc(100% - 20px)' }}>
-                  <div 
-                    className="absolute bottom-0 w-full transition-all duration-300"
-                    style={{ 
-                      height: `${Math.min(100, (pendingGarbage / 20) * 100)}%`,
-                      background: pendingGarbage > 10 ? 'linear-gradient(to top, #ff1744, #f44336)' : 'linear-gradient(to top, #ffea00, #ff9100)',
-                      boxShadow: pendingGarbage > 0 ? `0 0 10px ${pendingGarbage > 10 ? '#ff1744' : '#ffea00'}` : 'none'
-                    }}
-                  />
-                </div>
-
-                <div className="text-[10px] text-gray-500 font-bold mb-1">HOLD</div>
-                <div className="w-14 h-14 bg-black border-2 border-gray-700 rounded flex items-center justify-center relative">
-                  <MiniPieceIcon type={holdPiece} />
-                </div>
-                <div className="mt-8">
-                  <ControlButton onClick={togglePause} className="w-10 h-10 rounded-full border border-gray-600 bg-gray-800 text-gray-400 active:bg-gray-700 flex items-center justify-center" cooldown={200}>
-                    {paused ? <Play size={16} /> : <Pause size={16} />}
-                  </ControlButton>
-                </div>
-              </div>
-
-              {gameMode === 'MULTI' && gameStarted && (
-                <div className="mb-4">
-                  <MiniOpponentBoard opponent={gameOpponent} />
-                </div>
-              )}
-            </div>
-
-            <div className="relative shrink-0 flex items-start">
-
-              <TetrisBoard grid={grid} activeShape={activeShape} position={position} activePiece={activePiece} clearingRows={clearingRows} specialMessage={specialMessage} ghostPosition={ghostPosition} countdownValue={countdownValue} />
-              <Overlays {...overlayProps} />
-            </div>
-
-            <div className="flex flex-col items-center justify-between pt-4 pb-2 w-16 h-full">
-              <div className="flex flex-col items-center">
-                <div className="text-[10px] text-gray-500 font-bold mb-1">NEXT</div>
-                <div className="flex flex-col gap-1">
-                  {nextQueue.slice(0, 3).map((type, i) => <NextQueueItem key={i} type={type} index={i} />)}
-                </div>
-              </div>
-              {gameMode === 'CPU' && gameStarted && (
-                <div className="mb-10">
-                  <CpuStatusDisplay cpuHealth={cpuHealth} pendingGarbage={pendingGarbage} blinkDuration={blinkDuration} vertical={true} />
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="w-full max-w-lg shrink-0 z-10 touch-none"
-            style={{ paddingBottom: 'env(safe-area-inset-bottom, 8px)', paddingLeft: '8px', paddingRight: '8px', paddingTop: '6px' }}>
-            <div className="flex justify-between items-end">
-              <DPad move={move} hardDrop={hardDrop} />
-              <ActionButtons hold={hold} rotate={rotate} rotateCCW={rotateCCW} />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Landscape Layout */}
-      {!showSplash && (
-        <div className="hidden landscape:flex w-full h-full flex-row overflow-hidden relative z-0">
-          <div className="flex-1 flex flex-col items-center justify-between pb-1 pt-2 gap-2 bg-gray-900/20 border-r border-gray-800/50 min-w-0">
-            <div className="mt-2 flex items-baseline">
-              <h1 className="text-xs font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">NEON TETRIS 99</h1>
-              <span className="text-xs text-gray-500 ml-1.5">v{version}</span>
-            </div>
-            <div className="mb-2">
-              <DPad move={move} hardDrop={hardDrop} />
-            </div>
-          </div>
-
-          <div className="shrink-0 h-full flex items-center justify-center gap-2 px-2">
-            <div className="flex flex-col items-center justify-between pt-4 pb-4 w-12 h-[94vh] relative">
-              <div className="flex flex-col items-center">
-                {/* Garbage Gauge (Left of HOLD) */}
-                <div className="absolute -left-1 bottom-0 w-1.5 bg-gray-900/60 rounded-full overflow-hidden border border-gray-800" style={{ height: '100%' }}>
-                  <div 
-                    className="absolute bottom-0 w-full transition-all duration-300"
-                    style={{ 
-                      height: `${Math.min(100, (pendingGarbage / 20) * 100)}%`,
-                      background: pendingGarbage > 10 ? 'linear-gradient(to top, #ff1744, #f44336)' : 'linear-gradient(to top, #ffea00, #ff9100)',
-                      boxShadow: pendingGarbage > 0 ? `0 0 15px ${pendingGarbage > 10 ? '#ff1744' : '#ffea00'}` : 'none'
-                    }}
-                  />
-                </div>
-
-                <div className="text-[8px] text-gray-500 font-bold">HOLD</div>
-                <div className="w-12 h-12 bg-black border-2 border-gray-700 rounded flex items-center justify-center">
-                  <MiniPieceIcon type={holdPiece} />
-                </div>
-                <ControlButton onClick={togglePause} className="w-8 h-8 mt-2 rounded-full border border-gray-600 bg-gray-800 text-gray-400 active:bg-gray-700 flex items-center justify-center" cooldown={200}>
-                  {paused ? <Play size={12} /> : <Pause size={12} />} 
-                </ControlButton>
-              </div>
-
-              {gameMode === 'MULTI' && gameStarted && (
-                <div className="mb-4">
-                  <MiniOpponentBoard opponent={gameOpponent} />
-                </div>
-              )}
-            </div>
-
-            <div className="relative h-[94vh] aspect-[1/2] shadow-2xl flex items-start">
-
-              <TetrisBoard grid={grid} activeShape={activeShape} position={position} activePiece={activePiece} clearingRows={clearingRows} specialMessage={specialMessage} ghostPosition={ghostPosition} countdownValue={countdownValue} className="w-full h-full" style={{ width: '100%', height: '100%' }} />
-              <Overlays {...overlayProps} />
-            </div>
-
-            <div className="flex flex-col items-center justify-between mt-8 mb-4 w-12 h-full py-4">
-              <div className="flex flex-col items-center gap-2">
-                <div className="text-[8px] text-gray-500 font-bold">NEXT</div>
-                <div className="flex flex-col gap-1">
-                  {nextQueue.slice(0, 3).map((type, i) => <NextQueueItem key={i} type={type} index={i} />)}
-                </div>
-              </div>
-              {gameMode === 'CPU' && gameStarted && (
-                <CpuStatusDisplay cpuHealth={cpuHealth} pendingGarbage={pendingGarbage} blinkDuration={blinkDuration} vertical={false} />
-              )}
-            </div>
-          </div>
-
-          <div className="flex-1 flex flex-col items-center justify-between pb-8 pt-2 gap-2 bg-gray-900/20 border-l border-gray-800/50 min-w-0">
-            <div className="flex flex-col items-center gap-2 transform scale-90 origin-top mt-2">
-              <div className="bg-gray-900 px-4 py-2 rounded border border-gray-800 font-mono text-xs text-center w-32">
-                SCORE <span className="text-white block text-xl">{score}</span>
-              </div>
-              <div className="flex gap-2">
-                <div className="bg-gray-900 px-2 py-1 rounded border border-gray-800 whitespace-nowrap text-[10px] w-14 text-center">LVL <span className="text-yellow-400 block text-sm">{level}</span></div>
-                <div className="bg-gray-900 px-2 py-1 rounded border border-gray-800 whitespace-nowrap text-[10px] w-14 text-center">LINES <span className="text-green-400 block text-sm">{lines}</span></div>
-              </div>
-            </div>
-            <div className="mb-2">
-              <ActionButtons hold={hold} rotate={rotate} rotateCCW={rotateCCW} />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Matching Screen */}
       {currentScreen === 'matching' && (
         <MatchingScreen
           onGameStart={handleMultiplayerGameStart}
@@ -454,7 +161,6 @@ function App() {
         />
       )}
 
-      {/* Title Screen */}
       {showTitle && !showSplash && (
         <TitleScreen
           version={version}
@@ -465,7 +171,6 @@ function App() {
         />
       )}
 
-      {/* Settings Modal */}
       {showSettings && (
         <SettingsModal
           onClose={() => setShowSettings(false)}
