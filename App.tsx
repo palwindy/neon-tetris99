@@ -6,7 +6,7 @@ import { useMultiSync } from './hooks/useMultiSync';
 import { useCountdown } from './hooks/useCountdown';
 import { audioService } from './services/audioService';
 import { multiplayerService } from './services/multiplayerService';
-import { cpuOpponentService } from './services/cpuOpponentService';
+import { cpuOpponentService, CpuState, CpuStatus } from './services/cpuOpponentService';
 import { MultiPlayer, GameMode } from './types';
 
 import { PortraitLayout } from './components/game/PortraitLayout';
@@ -17,7 +17,7 @@ import TitleScreen from './components/ui/TitleScreen';
 import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 import SplashScreen from './components/ui/SplashScreen';
 
-const version = "3.00";
+const version = "4.00";
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('title');
@@ -74,21 +74,72 @@ function App() {
     currentScreen, isFinishing, triggerFinishAnimation, setPendingGarbage,
   });
 
-  // CPU 対戦時のダミー opponent（ミニ画面表示用）。CPU ロジック実装後はここを cpuOpponentService 由来の状態に差し替える。
+  // CPU 対戦時の状態（cpuOpponentService から購読）
   const [cpuOpponentLevel, setCpuOpponentLevel] = useState<number>(1);
+  const [cpuState, setCpuState] = useState<CpuState>({ matrix: '', pendingGarbage: 0, level: 1 });
+  const [cpuStatus, setCpuStatus] = useState<CpuStatus>('idle');
+
   const cpuOpponentForUI = useMemo<MultiPlayer | undefined>(() => {
     if (gameMode !== 'MULTI_CPU') return undefined;
     return {
       id: 'cpu',
       name: `CPU LV.${cpuOpponentLevel}`,
-      status: 'playing',
+      status: cpuStatus === 'defeated' ? 'defeated' : 'playing',
       isHost: false,
-      pendingGarbage: 0,
-      matrix: '',
+      pendingGarbage: cpuState.pendingGarbage,
+      matrix: cpuState.matrix,
     };
-  }, [gameMode, cpuOpponentLevel]);
+  }, [gameMode, cpuOpponentLevel, cpuState, cpuStatus]);
 
   const opponentForUI = gameMode === 'MULTI_CPU' ? cpuOpponentForUI : gameOpponent;
+
+  // CPU service の購読 ＆ ライフサイクル制御
+  useEffect(() => {
+    if (gameMode !== 'MULTI_CPU') return;
+
+    const onAttack = (linesAttack: number) => {
+      console.log(`[App] CPU -> player attack +${linesAttack}`);
+      setPendingGarbage(prev => prev + linesAttack);
+    };
+    const onStatus = (s: CpuStatus) => {
+      setCpuStatus(s);
+      if (s === 'defeated') {
+        triggerFinishAnimation('win');
+      }
+    };
+    const onState = (s: CpuState) => setCpuState(s);
+
+    cpuOpponentService.addAttackListener(onAttack);
+    cpuOpponentService.addStatusListener(onStatus);
+    cpuOpponentService.addStateListener(onState);
+
+    return () => {
+      cpuOpponentService.removeAttackListener(onAttack);
+      cpuOpponentService.removeStatusListener(onStatus);
+      cpuOpponentService.removeStateListener(onState);
+    };
+  }, [gameMode, setPendingGarbage, triggerFinishAnimation]);
+
+  // CPU はカウントダウンが終わって gameStarted になった瞬間に走り始める
+  useEffect(() => {
+    if (gameMode !== 'MULTI_CPU') return;
+    if (gameStarted && !cpuOpponentService.isRunning()) {
+      cpuOpponentService.start(cpuOpponentLevel);
+    }
+  }, [gameMode, gameStarted, cpuOpponentLevel]);
+
+  // ポーズ連動
+  useEffect(() => {
+    if (gameMode !== 'MULTI_CPU') return;
+    if (paused) cpuOpponentService.pause();
+    else if (gameStarted) cpuOpponentService.resume();
+  }, [paused, gameMode, gameStarted]);
+
+  // プレイヤーが負けた／勝った時に CPU を止める
+  useEffect(() => {
+    if (gameMode !== 'MULTI_CPU') return;
+    if (gameOver || isWinner) cpuOpponentService.stop();
+  }, [gameOver, isWinner, gameMode]);
 
   const { runCountdownSequence } = useCountdown({
     resetGame, startGame, setIsCountdown, setCountdownValue,
@@ -122,7 +173,8 @@ function App() {
   const handleCpuGameStart = useCallback((level: number) => {
     setCurrentScreen('game');
     setCpuOpponentLevel(level);
-    cpuOpponentService.start(level);
+    setCpuStatus('playing');
+    setCpuState({ matrix: '', pendingGarbage: 0, level });
     runCountdownSequence('MULTI_CPU');
   }, [runCountdownSequence]);
 

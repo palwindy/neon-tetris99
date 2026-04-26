@@ -644,7 +644,7 @@ export const useTetrisGame = ({
                 
                 // --- APPLY PENDING GARBAGE HERE ---
                 const pending = gameStateRef.current.pendingGarbage;
-                if (pending > 0 && (state.gameMode === 'CPU' || state.gameMode === 'MULTI')) {
+                if (pending > 0 && (state.gameMode === 'CPU' || state.gameMode === 'MULTI' || state.gameMode === 'MULTI_CPU')) {
                      const result = addGarbageToGrid(newGrid, pending);
                       if (result.gameOver) {
                           triggerFinishAnimation('lose');
@@ -751,7 +751,7 @@ export const useTetrisGame = ({
 
         // --- APPLY PENDING GARBAGE HERE (For no-clear lock) ---
         const pending = gameStateRef.current.pendingGarbage;
-        if (pending > 0 && (mode === 'CPU' || mode === 'MULTI')) {
+        if (pending > 0 && (mode === 'CPU' || mode === 'MULTI' || mode === 'MULTI_CPU')) {
              const result = addGarbageToGrid(tempGrid, pending);
               if (result.gameOver) {
                   setGrid(result.grid);

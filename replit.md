@@ -29,3 +29,16 @@ A neon-styled mobile Tetris game built with React 19, Vite, TypeScript, and Fire
 Configured as a static site:
 - Build: `npm run build`
 - Public directory: `dist`
+
+## Version History
+- **4.00** — VS MULTI に CPU 対戦機能を追加（5段階のレベル選択、攻防・勝敗連動）
+- **3.00** — 初期版（VS MULTI のオンライン対戦）
+
+## CPU AI (VS MULTI / VS CPU)
+- `services/cpuOpponentService.ts` — CPU 対戦サービス（公開 API、リスナー、ライフサイクル管理）
+- `services/cpuAi/cpuTypes.ts` — テトロミノ型定義と回転形状テーブル
+- `services/cpuAi/cpuBoard.ts` — 盤面操作（衝突判定、配置、ライン消去、ガベージ追加、7-bag）
+- `services/cpuAi/cpuEvaluator.ts` — Pierre Dellacherie 風評価関数による最善手探索
+- レベル別の思考間隔とランダム手率で難易度を制御（1=5秒/50%ランダム → 5=1秒/最善手）
+- T99 と同じ攻撃テーブル（Single 0/Double 1/Triple 2/Tetris 4 +B2B +REN +PC）でプレイヤーへガベージ送信
+- プレイヤーからの攻撃は次手の前にランダム穴で積み上げ、トップアウトで敗北通知
