@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useTetrisGame } from './hooks/useTetrisGame';
 import { useGameInput } from './hooks/useGameInput';
 import { useAppAudio } from './hooks/useAppAudio';
@@ -74,6 +74,22 @@ function App() {
     currentScreen, isFinishing, triggerFinishAnimation, setPendingGarbage,
   });
 
+  // CPU 対戦時のダミー opponent（ミニ画面表示用）。CPU ロジック実装後はここを cpuOpponentService 由来の状態に差し替える。
+  const [cpuOpponentLevel, setCpuOpponentLevel] = useState<number>(1);
+  const cpuOpponentForUI = useMemo<MultiPlayer | undefined>(() => {
+    if (gameMode !== 'MULTI_CPU') return undefined;
+    return {
+      id: 'cpu',
+      name: `CPU LV.${cpuOpponentLevel}`,
+      status: 'playing',
+      isHost: false,
+      pendingGarbage: 0,
+      matrix: '',
+    };
+  }, [gameMode, cpuOpponentLevel]);
+
+  const opponentForUI = gameMode === 'MULTI_CPU' ? cpuOpponentForUI : gameOpponent;
+
   const { runCountdownSequence } = useCountdown({
     resetGame, startGame, setIsCountdown, setCountdownValue,
   });
@@ -105,6 +121,7 @@ function App() {
 
   const handleCpuGameStart = useCallback((level: number) => {
     setCurrentScreen('game');
+    setCpuOpponentLevel(level);
     cpuOpponentService.start(level);
     runCountdownSequence('MULTI_CPU');
   }, [runCountdownSequence]);
@@ -147,7 +164,7 @@ function App() {
     score, lines, level,
     gameMode, gameStarted, paused,
     cpuHealth, blinkDuration,
-    pendingGarbage, gameOpponent,
+    pendingGarbage, gameOpponent: opponentForUI,
     move, hardDrop, rotate, rotateCCW, hold, togglePause,
     overlayProps,
   };

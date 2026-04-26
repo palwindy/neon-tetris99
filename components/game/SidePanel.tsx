@@ -63,7 +63,7 @@ export function SidePanel({
         )}
       </div>
 
-      {gameMode === 'MULTI' && gameStarted && (
+      {(gameMode === 'MULTI' || gameMode === 'MULTI_CPU') && gameStarted && (
         <div className="mb-4">
           <MiniOpponentBoard opponent={gameOpponent} />
         </div>

@@ -199,7 +199,7 @@ export const MatchingScreen: React.FC<MatchingScreenProps> = ({ onGameStart, onC
           <div className="rounded-xl border border-cyan-500/40 bg-black/40 p-3">
             <p className="text-[11px] text-cyan-300 font-bold tracking-widest text-center mb-2">SELECT CPU LEVEL</p>
             <div className="grid grid-cols-5 gap-2">
-              {[...Array(10)].map((_, idx) => {
+              {[...Array(5)].map((_, idx) => {
                 const lv = idx + 1;
                 const selected = cpuLevel === lv;
                 return (
