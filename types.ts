@@ -20,7 +20,7 @@ export interface Position {
   y: number;
 }
 
-export type GameMode = 'SINGLE' | 'CPU' | 'MULTI';
+export type GameMode = 'SINGLE' | 'CPU' | 'MULTI' | 'MULTI_CPU';
 
 export interface PlayerState {
   grid: Grid;

@@ -6,6 +6,7 @@ import { useMultiSync } from './hooks/useMultiSync';
 import { useCountdown } from './hooks/useCountdown';
 import { audioService } from './services/audioService';
 import { multiplayerService } from './services/multiplayerService';
+import { cpuOpponentService } from './services/cpuOpponentService';
 import { MultiPlayer, GameMode } from './types';
 
 import { PortraitLayout } from './components/game/PortraitLayout';
@@ -26,7 +27,11 @@ function App() {
 
   // --- ゲームコア ---
   const handleAttackSent = useCallback((lines: number) => {
-    multiplayerService.sendAttack(lines);
+    if (cpuOpponentService.isRunning()) {
+      cpuOpponentService.receivePlayerAttack(lines);
+    } else {
+      multiplayerService.sendAttack(lines);
+    }
   }, []);
 
   const handleFinishingStarted = useCallback((type: 'win' | 'lose', mode: any) => {
@@ -98,9 +103,16 @@ function App() {
     runCountdownSequence('MULTI');
   }, [runCountdownSequence]);
 
+  const handleCpuGameStart = useCallback((level: number) => {
+    setCurrentScreen('game');
+    cpuOpponentService.start(level);
+    runCountdownSequence('MULTI_CPU');
+  }, [runCountdownSequence]);
+
   const handleQuitToTitle = useCallback(() => {
     audioService.stopAll();
     if (gameMode === 'MULTI') multiplayerService.leaveRoom();
+    if (gameMode === 'MULTI_CPU') cpuOpponentService.stop();
     quitGame();
     setShowTitle(true);
     setCurrentScreen('title');
@@ -112,6 +124,10 @@ function App() {
       multiplayerService.updateStatus('found');
       setCurrentScreen('matching');
       resetGame('MULTI', false);
+    } else if (gameMode === 'MULTI_CPU') {
+      cpuOpponentService.stop();
+      setCurrentScreen('matching');
+      resetGame('MULTI_CPU', false);
     } else {
       runCountdownSequence(gameMode);
     }
@@ -156,6 +172,7 @@ function App() {
       {currentScreen === 'matching' && (
         <MatchingScreen
           onGameStart={handleMultiplayerGameStart}
+          onCpuGameStart={handleCpuGameStart}
           onBack={() => { setShowTitle(true); setCurrentScreen('title'); }}
           onOpenSettings={() => setShowSettings(true)}
         />

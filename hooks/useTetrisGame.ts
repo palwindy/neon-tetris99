@@ -539,7 +539,7 @@ export const useTetrisGame = ({
                 }
                 // 攻撃送信
                 if (remain > 0) {
-                    if (mode === 'MULTI' && onAttackSent) {
+                    if ((mode === 'MULTI' || mode === 'MULTI_CPU') && onAttackSent) {
                         onAttackSent(remain);
                     }
                     if (mode === 'CPU') {
@@ -1013,6 +1013,7 @@ useEffect(() => {
     if (gameMode === 'MULTI') {
       multiplayerService.sendMatrix(grid);
     }
+    // MULTI_CPU の場合は Firebase 同期せず、CPU サービス側で処理（cpuOpponentService）
   }, [grid, gameMode]);
 
   const resetGame = (mode?: GameMode, autoStart: boolean = true) => {
