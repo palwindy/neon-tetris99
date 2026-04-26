@@ -5,8 +5,9 @@ export default defineConfig({
   plugins: [react()],
   publicDir: 'public',
   server: {
-    host: true,
-    port: 9000,
-    hmr: false,  // 外部ブラウザ接続時のHMR再接続ループを完全に無効化
+    host: '0.0.0.0',
+    port: 5000,
+    allowedHosts: true,
+    hmr: false,
   },
 });
