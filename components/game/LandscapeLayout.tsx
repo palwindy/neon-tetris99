@@ -50,7 +50,7 @@ interface LandscapeLayoutProps {
   blinkDuration: string;
   // マルチ
   pendingGarbage: number;
-  gameOpponent: MultiPlayer | undefined;
+  gameOpponents: MultiPlayer[];
   // 操作
   move: (dir: string) => void;
   hardDrop: () => void;
@@ -70,7 +70,7 @@ export function LandscapeLayout({
   score, lines, level,
   gameMode, gameStarted, paused,
   cpuHealth, blinkDuration,
-  pendingGarbage, gameOpponent,
+  pendingGarbage, gameOpponents,
   move, hardDrop, rotate, rotateCCW, hold, togglePause,
   overlayProps,
 }: LandscapeLayoutProps) {
@@ -98,7 +98,7 @@ export function LandscapeLayout({
           togglePause={togglePause}
           gameMode={gameMode}
           gameStarted={gameStarted}
-          gameOpponent={gameOpponent}
+          gameOpponents={gameOpponents}
           variant="landscape"
         />
 

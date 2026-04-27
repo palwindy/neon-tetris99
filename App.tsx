@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useTetrisGame } from './hooks/useTetrisGame';
 import { useGameInput } from './hooks/useGameInput';
 import { useAppAudio } from './hooks/useAppAudio';
@@ -6,18 +6,17 @@ import { useMultiSync } from './hooks/useMultiSync';
 import { useCountdown } from './hooks/useCountdown';
 import { audioService } from './services/audioService';
 import { multiplayerService } from './services/multiplayerService';
-import { cpuOpponentService, CpuState, CpuStatus } from './services/cpuOpponentService';
-import { MultiPlayer, GameMode } from './types';
+import { cpuOpponentManager } from './services/cpuOpponentManager';
+import { MultiPlayer } from './types';
 
 import { PortraitLayout } from './components/game/PortraitLayout';
 import { LandscapeLayout } from './components/game/LandscapeLayout';
-import Overlays from './components/ui/Overlays';
 import SettingsModal from './components/ui/SettingsModal';
 import TitleScreen from './components/ui/TitleScreen';
 import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 import SplashScreen from './components/ui/SplashScreen';
 
-const version = "4.00";
+const version = "5.00";
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('title');
@@ -27,11 +26,8 @@ function App() {
 
   // --- ゲームコア ---
   const handleAttackSent = useCallback((lines: number) => {
-    if (cpuOpponentService.isRunning()) {
-      cpuOpponentService.receivePlayerAttack(lines);
-    } else {
-      multiplayerService.sendAttack(lines);
-    }
+    // VS MULTI 中は Firebase 経由で全プレイヤー（人＋CPU）に送信
+    multiplayerService.sendAttack(lines);
   }, []);
 
   const handleFinishingStarted = useCallback((type: 'win' | 'lose', mode: any) => {
@@ -48,12 +44,14 @@ function App() {
     gameMode, cpuHealth, nextAttackTime, playerAttack, pendingGarbage,
     move, rotate, rotateCCW, hardDrop, hold, togglePause, resetGame, startGame, quitGame,
     triggerFinishAnimation, isFinishing,
-    isCountdown, setIsCountdown, countdownValue, setCountdownValue,
-    setIsWinner, setGameOver, setPendingGarbage,
+    setIsCountdown, countdownValue, setCountdownValue,
+    setPendingGarbage,
   } = useTetrisGame({
     onAttackSent: handleAttackSent,
     onFinishingStarted: handleFinishingStarted,
   });
+
+  const isCountdown = countdownValue !== null;
 
   const { mapping, isRemapping, remapAction, startRemap, cancelRemap, resetMapping } = useGameInput(
     { move, rotate, rotateCCW, hardDrop, hold, togglePause },
@@ -62,90 +60,59 @@ function App() {
     gameOver,
   );
 
-  // --- 抽出フック ---
   const { bgmOn, seOn, audioReady, handleBgmToggle, handleSeToggle } = useAppAudio({
     showTitle, showSplash, currentScreen,
     gameStarted, paused, gameOver, isWinner,
     togglePause, setShowSplash,
   });
 
-  const { gameOpponent } = useMultiSync({
+  const { opponents, roomConfig, isHost } = useMultiSync({
     gameMode, gameStarted, gameOver, isWinner,
     currentScreen, isFinishing, triggerFinishAnimation, setPendingGarbage,
   });
 
-  // CPU 対戦時の状態（cpuOpponentService から購読）
-  const [cpuOpponentLevel, setCpuOpponentLevel] = useState<number>(1);
-  const [cpuState, setCpuState] = useState<CpuState>({ matrix: '', pendingGarbage: 0, level: 1 });
-  const [cpuStatus, setCpuStatus] = useState<CpuStatus>('idle');
-
-  const cpuOpponentForUI = useMemo<MultiPlayer | undefined>(() => {
-    if (gameMode !== 'MULTI_CPU') return undefined;
-    return {
-      id: 'cpu',
-      name: `CPU LV.${cpuOpponentLevel}`,
-      status: cpuStatus === 'defeated' ? 'defeated' : 'playing',
-      isHost: false,
-      pendingGarbage: cpuState.pendingGarbage,
-      matrix: cpuState.matrix,
-    };
-  }, [gameMode, cpuOpponentLevel, cpuState, cpuStatus]);
-
-  const opponentForUI = gameMode === 'MULTI_CPU' ? cpuOpponentForUI : gameOpponent;
-
-  // CPU service の購読 ＆ ライフサイクル制御
+  // --- ホスト側 CPU 駆動 ---
+  // ゲーム開始時に config の CPU 枠分だけ cpuOpponentManager に登録＆開始
   useEffect(() => {
-    if (gameMode !== 'MULTI_CPU') return;
+    if (gameMode !== 'MULTI' || !gameStarted || !isHost || !roomConfig) return;
+    if (cpuOpponentManager.isAnyRunning()) return;
 
-    const onAttack = (linesAttack: number) => {
-      console.log(`[App] CPU -> player attack +${linesAttack}`);
-      setPendingGarbage(prev => prev + linesAttack);
-    };
-    const onStatus = (s: CpuStatus) => {
-      setCpuStatus(s);
-      if (s === 'defeated') {
-        triggerFinishAnimation('win');
-      }
-    };
-    const onState = (s: CpuState) => setCpuState(s);
-
-    cpuOpponentService.addAttackListener(onAttack);
-    cpuOpponentService.addStatusListener(onStatus);
-    cpuOpponentService.addStateListener(onState);
+    roomConfig.slots.forEach((slot, idx) => {
+      if (slot.kind !== 'CPU') return;
+      const cpuId = `cpu_${idx + 1}`;
+      const lvl = slot.cpuLevel ?? 3;
+      const cpu = cpuOpponentManager.add(cpuId, lvl, {
+        onState: (state) => {
+          multiplayerService.updateCpuPlayer(cpuId, {
+            matrix: state.matrix,
+            status: state.status === 'defeated' ? 'defeated' : 'playing',
+          });
+        },
+        onAttack: (linesAtk) => {
+          multiplayerService.sendAttack(linesAtk, cpuId);
+        },
+      });
+      cpu.start();
+    });
 
     return () => {
-      cpuOpponentService.removeAttackListener(onAttack);
-      cpuOpponentService.removeStatusListener(onStatus);
-      cpuOpponentService.removeStateListener(onState);
+      // gameStarted=false へ遷移 or アンマウント時の停止は別 useEffect で行う
     };
-  }, [gameMode, setPendingGarbage, triggerFinishAnimation]);
+  }, [gameMode, gameStarted, isHost, roomConfig]);
 
-  // CPU はカウントダウンが終わって gameStarted になった瞬間に走り始める
+  // 終了時 CPU 停止
   useEffect(() => {
-    if (gameMode !== 'MULTI_CPU') return;
-    if (gameStarted && !cpuOpponentService.isRunning()) {
-      cpuOpponentService.start(cpuOpponentLevel);
+    if (gameMode !== 'MULTI' || !isHost) return;
+    if ((gameOver || isWinner) && cpuOpponentManager.isAnyRunning()) {
+      cpuOpponentManager.stopAll();
     }
-  }, [gameMode, gameStarted, cpuOpponentLevel]);
-
-  // ポーズ連動
-  useEffect(() => {
-    if (gameMode !== 'MULTI_CPU') return;
-    if (paused) cpuOpponentService.pause();
-    else if (gameStarted) cpuOpponentService.resume();
-  }, [paused, gameMode, gameStarted]);
-
-  // プレイヤーが負けた／勝った時に CPU を止める
-  useEffect(() => {
-    if (gameMode !== 'MULTI_CPU') return;
-    if (gameOver || isWinner) cpuOpponentService.stop();
-  }, [gameOver, isWinner, gameMode]);
+  }, [gameOver, isWinner, gameMode, isHost]);
 
   const { runCountdownSequence } = useCountdown({
     resetGame, startGame, setIsCountdown, setCountdownValue,
   });
 
-  // --- CPU 攻撃タイミング点滅 ---
+  // --- CPU 攻撃タイミング点滅（CPU モード単独用） ---
   const [blinkDuration, setBlinkDuration] = useState('2s');
   useEffect(() => {
     if (!gameStarted || gameMode !== 'CPU' || paused || isWinner) return;
@@ -170,18 +137,12 @@ function App() {
     runCountdownSequence('MULTI');
   }, [runCountdownSequence]);
 
-  const handleCpuGameStart = useCallback((level: number) => {
-    setCurrentScreen('game');
-    setCpuOpponentLevel(level);
-    setCpuStatus('playing');
-    setCpuState({ matrix: '', pendingGarbage: 0, level });
-    runCountdownSequence('MULTI_CPU');
-  }, [runCountdownSequence]);
-
   const handleQuitToTitle = useCallback(() => {
     audioService.stopAll();
-    if (gameMode === 'MULTI') multiplayerService.leaveRoom();
-    if (gameMode === 'MULTI_CPU') cpuOpponentService.stop();
+    if (gameMode === 'MULTI') {
+      cpuOpponentManager.stopAll();
+      multiplayerService.leaveRoom();
+    }
     quitGame();
     setShowTitle(true);
     setCurrentScreen('title');
@@ -190,13 +151,10 @@ function App() {
   const handleRetry = useCallback(() => {
     audioService.stopAll();
     if (gameMode === 'MULTI') {
-      multiplayerService.updateStatus('found');
+      cpuOpponentManager.stopAll();
+      multiplayerService.leaveRoom();
       setCurrentScreen('matching');
       resetGame('MULTI', false);
-    } else if (gameMode === 'MULTI_CPU') {
-      cpuOpponentService.stop();
-      setCurrentScreen('matching');
-      resetGame('MULTI_CPU', false);
     } else {
       runCountdownSequence(gameMode);
     }
@@ -216,7 +174,7 @@ function App() {
     score, lines, level,
     gameMode, gameStarted, paused,
     cpuHealth, blinkDuration,
-    pendingGarbage, gameOpponent: opponentForUI,
+    pendingGarbage, gameOpponents: opponents,
     move, hardDrop, rotate, rotateCCW, hold, togglePause,
     overlayProps,
   };
@@ -241,7 +199,6 @@ function App() {
       {currentScreen === 'matching' && (
         <MatchingScreen
           onGameStart={handleMultiplayerGameStart}
-          onCpuGameStart={handleCpuGameStart}
           onBack={() => { setShowTitle(true); setCurrentScreen('title'); }}
           onOpenSettings={() => setShowSettings(true)}
         />

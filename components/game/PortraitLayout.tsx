@@ -50,7 +50,7 @@ interface PortraitLayoutProps {
   blinkDuration: string;
   // マルチ
   pendingGarbage: number;
-  gameOpponent: MultiPlayer | undefined;
+  gameOpponents: MultiPlayer[];
   // 操作
   move: (dir: string) => void;
   hardDrop: () => void;
@@ -70,7 +70,7 @@ export function PortraitLayout({
   score, lines, level,
   gameMode, gameStarted, paused,
   cpuHealth, blinkDuration,
-  pendingGarbage, gameOpponent,
+  pendingGarbage, gameOpponents,
   move, hardDrop, rotate, rotateCCW, hold, togglePause,
   overlayProps,
 }: PortraitLayoutProps) {
@@ -86,7 +86,7 @@ export function PortraitLayout({
           togglePause={togglePause}
           gameMode={gameMode}
           gameStarted={gameStarted}
-          gameOpponent={gameOpponent}
+          gameOpponents={gameOpponents}
           variant="portrait"
         />
 

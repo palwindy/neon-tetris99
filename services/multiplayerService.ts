@@ -1,29 +1,32 @@
-import { MultiPlayer, MultiPlayerStatus } from '../types';
+import { MultiPlayer, MultiPlayerStatus, RoomConfig, SlotConfig } from '../types';
 import { db } from '../firebase';
-import { 
-  ref, 
-  onValue, 
-  set, 
-  update, 
-  onDisconnect, 
-  remove, 
-  serverTimestamp, 
+import {
+  ref,
+  onValue,
+  set,
+  update,
+  onDisconnect,
+  remove,
   get,
   Unsubscribe,
-  runTransaction
+  runTransaction,
 } from 'firebase/database';
 
 const STORAGE_KEY = 'neon-tetris-room';
 
 export type RoomEventCallback = (players: MultiPlayer[]) => void;
+export type RoomConfigCallback = (config: RoomConfig | null) => void;
 
 class MultiplayerService {
   private playerId: string;
   private playerName: string;
   private roomId: string = '';
   private listeners: Set<RoomEventCallback> = new Set();
-  private unsubscribe: Unsubscribe | null = null;
+  private configListeners: Set<RoomConfigCallback> = new Set();
+  private unsubscribePlayers: Unsubscribe | null = null;
+  private unsubscribeConfig: Unsubscribe | null = null;
   private currentPlayers: MultiPlayer[] = [];
+  private currentConfig: RoomConfig | null = null;
   private lastStatus: MultiPlayerStatus | null = null;
 
   constructor() {
@@ -57,146 +60,205 @@ class MultiplayerService {
 
   getPlayerId() { return this.playerId; }
   getPlayerName() { return this.playerName; }
+  getCurrentPlayers() { return this.currentPlayers; }
+  getCurrentConfig() { return this.currentConfig; }
 
   addListener(cb: RoomEventCallback) {
     this.listeners.add(cb);
     if (this.currentPlayers.length > 0) cb(this.currentPlayers);
   }
+  removeListener(cb: RoomEventCallback) { this.listeners.delete(cb); }
 
-  removeListener(cb: RoomEventCallback) {
-    this.listeners.delete(cb);
+  addConfigListener(cb: RoomConfigCallback) {
+    this.configListeners.add(cb);
+    if (this.currentConfig) cb(this.currentConfig);
   }
+  removeConfigListener(cb: RoomConfigCallback) { this.configListeners.delete(cb); }
 
   private notify(players: MultiPlayer[]) {
-    console.log("[MultiplayerService] notify players:", players);
     this.currentPlayers = players;
     this.listeners.forEach(cb => cb(players));
   }
 
-  async joinRoom(roomId: string, onPlayersChange?: RoomEventCallback) {
-    this.roomId = roomId;
-    if (onPlayersChange) this.addListener(onPlayersChange);
+  private notifyConfig(config: RoomConfig | null) {
+    this.currentConfig = config;
+    this.configListeners.forEach(cb => cb(config));
+  }
 
+  /**
+   * ルーム作成 or 参加。
+   * - hostSlots を渡した場合：自分がホストとして config 付きでルームを作成。CPU プレイヤーも書き込む
+   * - hostSlots を渡さない場合：既存ルームに HUMAN プレイヤーとして参加
+   */
+  async joinRoom(roomId: string, hostSlots?: SlotConfig[]) {
+    this.roomId = roomId;
     localStorage.setItem(`${STORAGE_KEY}_roomId`, roomId);
 
+    const roomRef = ref(db, `rooms/${roomId}`);
     const playerRef = ref(db, `rooms/${roomId}/players/${this.playerId}`);
-    const roomPlayersRef = ref(db, `rooms/${roomId}/players`);
-
-    const initialData: MultiPlayer = {
-      id: this.playerId,
-      name: this.playerName,
-      status: 'found',
-      isHost: false,
-      pendingGarbage: 0
-    };
+    const configRef = ref(db, `rooms/${roomId}/config`);
 
     onDisconnect(playerRef).remove();
+    this.subscribeRoom(roomId);
 
-    if (this.unsubscribe) this.unsubscribe();
-    this.unsubscribe = onValue(roomPlayersRef, (snapshot) => {
-      const data = snapshot.val();
-      if (!data) {
-        set(playerRef, { ...initialData, isHost: true });
-        return;
-      }
+    const snap = await get(roomRef);
+    const exists = snap.exists();
 
-      const playersObj = data as Record<string, MultiPlayer>;
-      const playersList = Object.values(playersObj);
-      
-      const hasHost = playersList.some(p => p.isHost);
-      if (!hasHost) {
-        const isMeOnly = playersList.length === 1 && playersList[0].id === this.playerId;
-        if (isMeOnly) {
-          update(playerRef, { isHost: true });
+    if (!exists) {
+      // 新規作成。hostSlots 必須
+      const slots: SlotConfig[] = hostSlots ?? [{ kind: 'HUMAN' }];
+      const config: RoomConfig = { hostId: this.playerId, slots };
+      await set(configRef, config);
+
+      const me: MultiPlayer = {
+        id: this.playerId,
+        name: this.playerName,
+        status: 'found',
+        isHost: true,
+        pendingGarbage: 0,
+        slotIndex: 0,
+        isCpu: false,
+      };
+      await set(playerRef, me);
+
+      // CPU プレイヤーを書き込む
+      for (let i = 0; i < slots.length; i++) {
+        const s = slots[i];
+        if (s.kind === 'CPU') {
+          const cpuId = `cpu_${i + 1}`;
+          const lvl = s.cpuLevel ?? 3;
+          const cpu: MultiPlayer = {
+            id: cpuId,
+            name: `CPU LV.${lvl}`,
+            status: 'ready',
+            isHost: false,
+            pendingGarbage: 0,
+            slotIndex: i + 1,
+            isCpu: true,
+            cpuLevel: lvl,
+            matrix: '',
+          };
+          await set(ref(db, `rooms/${roomId}/players/${cpuId}`), cpu);
         }
       }
+    } else {
+      // 既存ルームに参加
+      const me: MultiPlayer = {
+        id: this.playerId,
+        name: this.playerName,
+        status: 'found',
+        isHost: false,
+        pendingGarbage: 0,
+        isCpu: false,
+      };
+      await set(playerRef, me);
+    }
+  }
 
-      if (!playersObj[this.playerId]) {
-        set(playerRef, initialData);
+  private subscribeRoom(roomId: string) {
+    if (this.unsubscribePlayers) this.unsubscribePlayers();
+    if (this.unsubscribeConfig) this.unsubscribeConfig();
+
+    const playersRef = ref(db, `rooms/${roomId}/players`);
+    const configRef = ref(db, `rooms/${roomId}/config`);
+
+    this.unsubscribeConfig = onValue(configRef, snap => {
+      this.notifyConfig(snap.exists() ? (snap.val() as RoomConfig) : null);
+    });
+
+    this.unsubscribePlayers = onValue(playersRef, snap => {
+      if (!snap.exists()) {
+        this.notify([]);
+        return;
       }
-
-      this.notify(playersList);
+      const list = Object.values(snap.val() as Record<string, MultiPlayer>);
+      this.notify(list);
     });
   }
 
-  setReady() {
-    this.updateStatus('ready');
-  }
+  setReady() { this.updateStatus('ready'); }
 
   updateStatus(status: MultiPlayerStatus) {
     if (!this.roomId) return;
     if (this.lastStatus === status) return;
-
-    console.log(`[MultiplayerService] updateStatus: ${this.lastStatus} -> ${status} for roomId: ${this.roomId}`);
     this.lastStatus = status;
-    
-    const playerRef = ref(db, `rooms/${this.roomId}/players/${this.playerId}`);
-    update(playerRef, { status });
+    update(ref(db, `rooms/${this.roomId}/players/${this.playerId}`), { status });
   }
 
   async sendMatrix(grid: import('../types').Grid) {
     if (!this.roomId) return;
-    
-    let matrixStr = '';
+    let s = '';
     for (let y = 0; y < grid.length; y++) {
-      for (let x = 0; x < grid[y].length; x++) {
-        matrixStr += grid[y][x].filled ? '1' : '0';
-      }
+      for (let x = 0; x < grid[y].length; x++) s += grid[y][x].filled ? '1' : '0';
     }
-
-    const playerRef = ref(db, `rooms/${this.roomId}/players/${this.playerId}`);
     try {
-      await update(playerRef, { matrix: matrixStr });
-    } catch (e) {
-      console.error("[MultiplayerService] sendMatrix failed:", e);
-    }
+      await update(ref(db, `rooms/${this.roomId}/players/${this.playerId}`), { matrix: s });
+    } catch (e) { console.error('[MultiplayerService] sendMatrix failed:', e); }
   }
 
-  async sendAttack(lines: number) {
+  /**
+   * 自分（または fromId 指定）が攻撃を出す。生存している自分以外の全プレイヤーに同じ火力を送る
+   */
+  async sendAttack(lines: number, fromId?: string) {
     if (!this.roomId || lines <= 0) return;
-    const playersRef = ref(db, `rooms/${this.roomId}/players`);
-    
+    const senderId = fromId ?? this.playerId;
     try {
-      const snapshot = await get(playersRef);
-      if (!snapshot.exists()) return;
-      
-      const players = snapshot.val();
-      const opponentId = Object.keys(players).find(id => id !== this.playerId);
-      
-      if (opponentId) {
-        const opponentGarbageRef = ref(db, `rooms/${this.roomId}/players/${opponentId}/pendingGarbage`);
-        await runTransaction(opponentGarbageRef, (currentValue) => {
-          return (currentValue || 0) + lines;
-        });
-        console.log(`[MultiplayerService] Sent ${lines} lines of garbage to ${opponentId}`);
-      }
-    } catch (e) {
-      console.error("[MultiplayerService] sendAttack failed:", e);
-    }
+      const snap = await get(ref(db, `rooms/${this.roomId}/players`));
+      if (!snap.exists()) return;
+      const players = snap.val() as Record<string, MultiPlayer>;
+      const targets = Object.values(players).filter(
+        p => p.id !== senderId && p.status !== 'defeated'
+      );
+      await Promise.all(
+        targets.map(t =>
+          runTransaction(
+            ref(db, `rooms/${this.roomId}/players/${t.id}/pendingGarbage`),
+            (cur) => (cur || 0) + lines
+          )
+        )
+      );
+      console.log(`[MultiplayerService] attack ${lines} from ${senderId} -> ${targets.length} targets`);
+    } catch (e) { console.error('[MultiplayerService] sendAttack failed:', e); }
+  }
+
+  async resetPendingGarbageFor(playerId: string) {
+    if (!this.roomId) return;
+    await update(ref(db, `rooms/${this.roomId}/players/${playerId}`), { pendingGarbage: 0 });
   }
 
   async resetPendingGarbage() {
+    return this.resetPendingGarbageFor(this.playerId);
+  }
+
+  /** ホストが CPU プレイヤーの状態を書き込む */
+  async updateCpuPlayer(cpuId: string, fields: Partial<MultiPlayer>) {
     if (!this.roomId) return;
-    const playerRef = ref(db, `rooms/${this.roomId}/players/${this.playerId}`);
-    await update(playerRef, { pendingGarbage: 0 });
+    try {
+      await update(ref(db, `rooms/${this.roomId}/players/${cpuId}`), fields);
+    } catch (e) { console.error('[MultiplayerService] updateCpuPlayer failed:', e); }
   }
 
   async leaveRoom() {
-    if (this.unsubscribe) {
-      this.unsubscribe();
-      this.unsubscribe = null;
-    }
+    if (this.unsubscribePlayers) { this.unsubscribePlayers(); this.unsubscribePlayers = null; }
+    if (this.unsubscribeConfig) { this.unsubscribeConfig(); this.unsubscribeConfig = null; }
     if (this.roomId) {
       const playerRef = ref(db, `rooms/${this.roomId}/players/${this.playerId}`);
       await remove(playerRef);
-      const roomPlayersRef = ref(db, `rooms/${this.roomId}/players`);
-      const snapshot = await get(roomPlayersRef);
-      if (!snapshot.exists()) {
+      // ホストが抜けた場合、ルームを掃除（CPU 含めて全削除）
+      const me = this.currentPlayers.find(p => p.id === this.playerId);
+      if (me?.isHost) {
         await remove(ref(db, `rooms/${this.roomId}`));
+      } else {
+        const snap = await get(ref(db, `rooms/${this.roomId}/players`));
+        if (!snap.exists()) {
+          await remove(ref(db, `rooms/${this.roomId}`));
+        }
       }
     }
     this.roomId = '';
+    this.lastStatus = null;
     this.notify([]);
+    this.notifyConfig(null);
   }
 }
 
