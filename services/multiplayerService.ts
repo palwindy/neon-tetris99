@@ -92,21 +92,17 @@ class MultiplayerService {
    */
   async joinRoom(roomId: string, hostSlots?: SlotConfig[]) {
     this.roomId = roomId;
+    this.lastStatus = null;
     localStorage.setItem(`${STORAGE_KEY}_roomId`, roomId);
 
     const roomRef = ref(db, `rooms/${roomId}`);
     const playerRef = ref(db, `rooms/${roomId}/players/${this.playerId}`);
     const configRef = ref(db, `rooms/${roomId}/config`);
 
-    onDisconnect(playerRef).remove();
-    this.subscribeRoom(roomId);
-
-    const snap = await get(roomRef);
-    const exists = snap.exists();
-
-    if (!exists) {
-      // 新規作成。hostSlots 必須
-      const slots: SlotConfig[] = hostSlots ?? [{ kind: 'HUMAN' }];
+    if (hostSlots) {
+      // ホストとして「部屋を作る」: 既存部屋（CPU 残骸・古い config 含む）を完全削除してから再構築
+      await remove(roomRef);
+      const slots: SlotConfig[] = hostSlots;
       const config: RoomConfig = { hostId: this.playerId, slots };
       await set(configRef, config);
 
@@ -121,7 +117,7 @@ class MultiplayerService {
       };
       await set(playerRef, me);
 
-      // CPU プレイヤーを書き込む
+      // CPU プレイヤーを書き込む（必要枠数のみ）
       for (let i = 0; i < slots.length; i++) {
         const s = slots[i];
         if (s.kind === 'CPU') {
@@ -142,7 +138,12 @@ class MultiplayerService {
         }
       }
     } else {
-      // 既存ルームに参加
+      // ゲストとして既存ルームに参加
+      const snap = await get(roomRef);
+      if (!snap.exists()) {
+        console.warn(`[MultiplayerService] join: room ${roomId} does not exist`);
+        return;
+      }
       const me: MultiPlayer = {
         id: this.playerId,
         name: this.playerName,
@@ -153,6 +154,9 @@ class MultiplayerService {
       };
       await set(playerRef, me);
     }
+
+    onDisconnect(playerRef).remove();
+    this.subscribeRoom(roomId);
   }
 
   private subscribeRoom(roomId: string) {

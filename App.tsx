@@ -77,6 +77,10 @@ function App() {
     if (gameMode !== 'MULTI' || !gameStarted || !isHost || !roomConfig) return;
     if (cpuOpponentManager.isAnyRunning()) return;
 
+    // 念のため前回のローカル CPU を完全クリア（残骸防止）
+    cpuOpponentManager.stopAll();
+
+    console.log('[App] starting CPU instances for slots:', roomConfig.slots);
     roomConfig.slots.forEach((slot, idx) => {
       if (slot.kind !== 'CPU') return;
       const cpuId = `cpu_${idx + 1}`;
@@ -94,10 +98,6 @@ function App() {
       });
       cpu.start();
     });
-
-    return () => {
-      // gameStarted=false へ遷移 or アンマウント時の停止は別 useEffect で行う
-    };
   }, [gameMode, gameStarted, isHost, roomConfig]);
 
   // 終了時 CPU 停止
