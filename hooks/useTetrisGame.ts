@@ -843,25 +843,41 @@ export const useTetrisGame = ({
   const hardDrop = useCallback(() => {
     if (gameOver || paused || !gameStarted || isWinner || isClearingRef.current || isLockingRef.current || isFinishing) return; // Added isFinishing
     if (hardDropLockedRef.current) return;
-    
+
     // CRITICAL: Use Ref data to avoid stale closures during rapid fire
     const currentPos = gameStateRef.current.position;
     const currentShape = gameStateRef.current.activeShape;
     const currentGrid = gameStateRef.current.grid;
+    const currentPiece = gameStateRef.current.activePiece;
+    if (!currentPiece) return;
 
     let currentY = currentPos.y;
     while (!checkCollision({ x: currentPos.x, y: currentY + 1 }, currentShape, currentGrid) && currentY < BOARD_HEIGHT) {
       currentY++;
     }
     const newPos = { x: currentPos.x, y: currentY };
-    
+
     setPosition(newPos);
     gameStateRef.current.position = newPos; // Sync Ref
 
     audioService.playHardDrop();
-    lockStartTimeRef.current = Date.now();
-    hardDropLockedRef.current = true; 
-  }, [gameOver, paused, gameStarted, isWinner]);
+
+    // 本家 TETRIS 99 同様、ハードドロップ後はそのまま着地確定
+    // （操作猶予を与えず即ロック）
+    hardDropLockedRef.current = true;
+    lockStartTimeRef.current = null;
+    lockPiece(
+      newPos,
+      currentShape,
+      currentGrid,
+      currentPiece,
+      gameStateRef.current.combo,
+      gameStateRef.current.rotationIndex,
+      gameStateRef.current.backToBack,
+      gameStateRef.current.gameMode,
+      gameStateRef.current.cpuHealth,
+    );
+  }, [gameOver, paused, gameStarted, isWinner, isFinishing, lockPiece]);
 
   const tryRotate = useCallback((direction: 'CW' | 'CCW') => {
     if (gameOver || paused || !gameStarted || isWinner || isClearingRef.current || isLockingRef.current) return;
@@ -1043,18 +1059,18 @@ useEffect(() => {
     hardDropLockedRef.current = false;
     audioService.setBgmPitch(1.0);
 
+    // NEXT バグ修正：初手をボード上に置かず、NEXT キューに全部入れておく
+    // → カウントダウン後 startGame() で NEXT 先頭が降ってくるようにする
     const initialBag = [...getTetrominoBag(), ...getTetrominoBag()];
-    const firstPiece = initialBag.shift()!;
-    const shape = TETROMINOS[firstPiece].shape;
-    const startPos = { x: Math.floor(BOARD_WIDTH / 2) - Math.floor(shape[0].length / 2), y: 0 };
-    
+    const startPos = { x: Math.floor(BOARD_WIDTH / 2) - 1, y: 0 };
+
     setNextQueue(initialBag);
-    setActivePiece(firstPiece);
-    setActiveShape(shape);
+    setActivePiece(null);
+    setActiveShape([]);
     setPosition(startPos);
     setRotationIndex(0);
     setCanHold(true);
-    
+
     // Initial Ref Sync
     gameStateRef.current = {
         ...gameStateRef.current,
@@ -1062,12 +1078,12 @@ useEffect(() => {
         score: 0,
         lines: 0,
         level: 1,
-        activePiece: firstPiece,
-        activeShape: shape,
+        activePiece: null,
+        activeShape: [],
         position: startPos,
         rotationIndex: 0,
         nextQueue: initialBag,
-        gameStarted: autoStart,
+        gameStarted: false,
         gameOver: false,
         isWinner: false,
         paused: false,
@@ -1079,6 +1095,10 @@ useEffect(() => {
     lastKickIndex.current = 0;
 
     if (autoStart) {
+      // 互換性のため：autoStart=true なら NEXT 先頭を即時 spawn してから開始
+      const next = initialBag.shift()!;
+      spawnPiece(next, initialBag);
+      gameStateRef.current.gameStarted = true;
       setGameStarted(true);
     } else {
       setGameStarted(false);
@@ -1133,8 +1153,18 @@ useEffect(() => {
   }, []);
 
   const startGame = useCallback(() => {
+    // NEXT バグ修正：カウントダウン後の最初のミノが「NEXT 先頭」になるよう
+    // ここで初めて先頭を pop して spawn する
+    if (!gameStateRef.current.activePiece) {
+      const queue = [...gameStateRef.current.nextQueue];
+      const first = queue.shift();
+      if (first) {
+        spawnPiece(first, queue);
+      }
+    }
+    gameStateRef.current.gameStarted = true;
     setGameStarted(true);
-  }, []);
+  }, [spawnPiece]);
 
   return {
     grid,

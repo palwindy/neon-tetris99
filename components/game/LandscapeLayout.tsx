@@ -75,7 +75,7 @@ export function LandscapeLayout({
   overlayProps,
 }: LandscapeLayoutProps) {
   return (
-    <div className="hidden landscape:flex w-full h-full flex-row overflow-hidden relative z-0">
+    <div className="flex w-full h-full flex-row overflow-hidden relative z-0">
       {/* 左カラム：タイトル + DPad */}
       <div className="flex-1 flex flex-col items-center justify-between pb-1 pt-2 gap-2 bg-gray-900/20 border-r border-gray-800/50 min-w-0">
         <div className="mt-2 flex items-baseline">

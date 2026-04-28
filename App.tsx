@@ -9,14 +9,56 @@ import { multiplayerService } from './services/multiplayerService';
 import { cpuOpponentManager } from './services/cpuOpponentManager';
 import { MultiPlayer } from './types';
 
-import { PortraitLayout } from './components/game/PortraitLayout';
 import { LandscapeLayout } from './components/game/LandscapeLayout';
 import SettingsModal from './components/ui/SettingsModal';
 import TitleScreen from './components/ui/TitleScreen';
 import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 import SplashScreen from './components/ui/SplashScreen';
 
-const version = "5.02";
+const version = "5.10";
+
+/**
+ * 端末が縦持ち（ポートレート）の時、内側コンテンツを強制的に
+ * 横向き（時計回り90°）で表示する。横持ちの時はそのまま。
+ * 画面全体（ゲーム画面・タイトル・マッチング・モーダル）に共通適用。
+ */
+const ForcedLandscape: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [isPortrait, setIsPortrait] = useState(
+    typeof window !== 'undefined' ? window.innerHeight > window.innerWidth : false
+  );
+
+  useEffect(() => {
+    const update = () => setIsPortrait(window.innerHeight > window.innerWidth);
+    update();
+    window.addEventListener('resize', update);
+    window.addEventListener('orientationchange', update);
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('orientationchange', update);
+    };
+  }, []);
+
+  if (!isPortrait) {
+    return <div className="w-full h-full">{children}</div>;
+  }
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: '100vw',
+        width: '100vh',
+        height: '100vw',
+        transform: 'rotate(90deg)',
+        transformOrigin: 'top left',
+        overflow: 'hidden',
+      }}
+    >
+      {children}
+    </div>
+  );
+};
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('title');
@@ -193,35 +235,38 @@ function App() {
         />
       )}
 
-      {!showSplash && <PortraitLayout  {...layoutProps} />}
-      {!showSplash && <LandscapeLayout {...layoutProps} />}
+      {!showSplash && (
+        <ForcedLandscape>
+          <LandscapeLayout {...layoutProps} />
 
-      {currentScreen === 'matching' && (
-        <MatchingScreen
-          onGameStart={handleMultiplayerGameStart}
-          onBack={() => { setShowTitle(true); setCurrentScreen('title'); }}
-          onOpenSettings={() => setShowSettings(true)}
-        />
-      )}
+          {currentScreen === 'matching' && (
+            <MatchingScreen
+              onGameStart={handleMultiplayerGameStart}
+              onBack={() => { setShowTitle(true); setCurrentScreen('title'); }}
+              onOpenSettings={() => setShowSettings(true)}
+            />
+          )}
 
-      {showTitle && !showSplash && (
-        <TitleScreen
-          version={version}
-          onStartSingle={() => handleStartGame('SINGLE')}
-          onStartCpu={() => handleStartGame('CPU')}
-          onStartMulti={() => { setShowTitle(false); setCurrentScreen('matching'); }}
-          onOpenSettings={() => setShowSettings(true)}
-        />
-      )}
+          {showTitle && (
+            <TitleScreen
+              version={version}
+              onStartSingle={() => handleStartGame('SINGLE')}
+              onStartCpu={() => handleStartGame('CPU')}
+              onStartMulti={() => { setShowTitle(false); setCurrentScreen('matching'); }}
+              onOpenSettings={() => setShowSettings(true)}
+            />
+          )}
 
-      {showSettings && (
-        <SettingsModal
-          onClose={() => setShowSettings(false)}
-          bgmOn={bgmOn} seOn={seOn}
-          onBgmToggle={handleBgmToggle} onSeToggle={handleSeToggle}
-          mapping={mapping} isRemapping={isRemapping} remapAction={remapAction}
-          startRemap={startRemap} cancelRemap={cancelRemap} resetMapping={resetMapping}
-        />
+          {showSettings && (
+            <SettingsModal
+              onClose={() => setShowSettings(false)}
+              bgmOn={bgmOn} seOn={seOn}
+              onBgmToggle={handleBgmToggle} onSeToggle={handleSeToggle}
+              mapping={mapping} isRemapping={isRemapping} remapAction={remapAction}
+              startRemap={startRemap} cancelRemap={cancelRemap} resetMapping={resetMapping}
+            />
+          )}
+        </ForcedLandscape>
       )}
     </div>
   );

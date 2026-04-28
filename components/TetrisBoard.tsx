@@ -35,8 +35,8 @@ const TetrisBoard: React.FC<BoardProps> = ({
     // Clone grid
     const display = grid.map(row => row.map(cell => ({ ...cell, isGhost: false })));
 
-    // Only draw active piece/ghost if we aren't currently clearing lines
-    if (clearingRows.length === 0) {
+    // Only draw active piece/ghost if we aren't currently clearing lines and a piece exists
+    if (clearingRows.length === 0 && activePiece && activeShape.length > 0) {
       const color = TETROMINOS[activePiece].color;
       
       // 1. Draw Ghost Piece (Behind active)
