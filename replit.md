@@ -31,6 +31,7 @@ Configured as a static site:
 - Public directory: `dist`
 
 ## Version History
+- **5.02** — VS MULTI 複数人バグ修正。ホスト「部屋を作る」押下時に Firebase 上の未使用 4 桁 ROOM ID を毎回発行し、別の人の進行中ルームを偶然踏み潰さないようにした（複数人が同時に別部屋でプレイ可能）。
 - **5.00** — VS MULTI を 3 人対戦対応に拡張。ホストが各枠を HUMAN/CPU(Lv1-5) で個別指定。攻撃は全相手に同火力同時送信、最後の 1 人になるまで継続（T99 形式）。VS CPU 1on1 を VS MULTI 内へ統合（GameMode `MULTI_CPU` 廃止）。VS MULTI 中は PAUSE 無効化。
 - **4.00** — VS MULTI に CPU 対戦機能を追加（5段階のレベル選択、攻防・勝敗連動）
 - **3.00** — 初期版（VS MULTI のオンライン対戦）

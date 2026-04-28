@@ -69,7 +69,10 @@ export const MatchingScreen: React.FC<MatchingScreenProps> = ({ onGameStart, onB
 
   const handleCreate = async () => {
     audioService.playOk();
-    await multiplayerService.joinRoom(roomId, buildHostSlots());
+    // 他人が使用中のルーム ID と衝突しないよう、毎回 Firebase 上で未使用の 4 桁を発行
+    const freshId = await multiplayerService.generateUniqueRoomId();
+    setRoomId(freshId);
+    await multiplayerService.joinRoom(freshId, buildHostSlots());
     setJoined(true);
   };
 

@@ -58,6 +58,22 @@ class MultiplayerService {
     return String(Math.floor(1000 + Math.random() * 9000));
   }
 
+  /**
+   * Firebase 上で未使用の 4 桁 ROOM ID を生成する。
+   * 既存ルームと衝突しないことが保証される（最大 30 回試行）。
+   * 複数プレイヤーが同時にホストしても部屋が混ざらないようにするため、
+   * MatchingScreen の「部屋を作る」押下時に必ずこの ID を採用する。
+   */
+  async generateUniqueRoomId(): Promise<string> {
+    for (let i = 0; i < 30; i++) {
+      const candidate = String(Math.floor(1000 + Math.random() * 9000));
+      const snap = await get(ref(db, `rooms/${candidate}`));
+      if (!snap.exists()) return candidate;
+    }
+    // 万が一すべて衝突した場合のフォールバック
+    return String(Math.floor(1000 + Math.random() * 9000));
+  }
+
   getPlayerId() { return this.playerId; }
   getPlayerName() { return this.playerName; }
   getCurrentPlayers() { return this.currentPlayers; }
