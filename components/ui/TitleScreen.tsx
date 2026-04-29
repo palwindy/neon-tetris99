@@ -45,12 +45,12 @@ const TitleScreen: React.FC<TitleScreenProps> = ({ version, onStartSingle, onSta
         </button>
         <button onClick={() => handleSelect('cpu', onStartCpu)}
           disabled={selecting !== null}
-          className={`flex-1 bg-gray-800/80 border border-gray-600 text-gray-300 font-bold py-2 rounded-full shadow-lg active:scale-95 tracking-wide hover:bg-gray-700 transition-all hover:text-white hover:border-gray-500 flex items-center justify-center gap-2 ${selecting === 'cpu' ? 'animate-blink' : ''}`}>
+          className={`flex-1 bg-gradient-to-r from-cyan-600 to-emerald-600 text-white font-bold py-2 rounded-full shadow-[0_0_20px_rgba(6,182,212,0.5)] active:scale-95 text-base tracking-wider hover:brightness-110 transition-all flex items-center justify-center gap-2 ${selecting === 'cpu' ? 'animate-blink' : ''}`}>
           <Bot size={18} /> VS CPU
         </button>
         <button onClick={() => handleSelect('multi', onStartMulti)}
           disabled={selecting !== null}
-          className={`flex-1 bg-gray-800/80 border border-gray-600 text-gray-300 font-bold py-2 rounded-full shadow-lg active:scale-95 tracking-wide hover:bg-gray-700 transition-all hover:text-white hover:border-gray-500 flex items-center justify-center gap-2 ${selecting === 'multi' ? 'animate-blink' : ''}`}>
+          className={`flex-1 bg-gradient-to-r from-orange-500 to-pink-600 text-white font-bold py-2 rounded-full shadow-[0_0_20px_rgba(249,115,22,0.5)] active:scale-95 text-base tracking-wider hover:brightness-110 transition-all flex items-center justify-center gap-2 ${selecting === 'multi' ? 'animate-blink' : ''}`}>
           <Users size={18} /> VS MULTI
         </button>
       </div>

@@ -20,7 +20,7 @@ import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 import SplashScreen from './components/ui/SplashScreen';
 import CpuLevelSelectModal from './components/ui/CpuLevelSelectModal';
 
-const version = "5.14";
+const version = "5.15";
 
 /**
  * 端末が縦持ち（ポートレート）の時、内側コンテンツを強制的に
@@ -259,8 +259,12 @@ function App() {
     handleStartGame('CPU');
   }, [handleStartGame]);
 
+  // TitleScreen の selecting 状態をリセットするため key を使う
+  const [titleKey, setTitleKey] = useState(0);
+
   const handleCpuLevelCancel = useCallback(() => {
     setShowCpuLevel(false);
+    setTitleKey(k => k + 1); // TitleScreen を再マウントして selecting をリセット
   }, []);
 
   const handleMultiplayerGameStart = useCallback((_roomId: string, _players: MultiPlayer[]) => {
@@ -349,6 +353,7 @@ function App() {
 
         {!showSplash && showTitle && (
           <TitleScreen
+            key={titleKey}
             version={version}
             onStartSingle={() => handleStartGame('SINGLE')}
             onStartCpu={handleStartCpu}
