@@ -16,7 +16,7 @@ import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 import SplashScreen from './components/ui/SplashScreen';
 import CpuLevelSelectModal from './components/ui/CpuLevelSelectModal';
 
-const version = "5.12";
+const version = "5.13";
 
 /**
  * 端末が縦持ち（ポートレート）の時、内側コンテンツを強制的に
@@ -94,6 +94,7 @@ function App() {
   } = useTetrisGame({
     onAttackSent: handleAttackSent,
     onFinishingStarted: handleFinishingStarted,
+    cpuLevel,
   });
 
   const isCountdown = countdownValue !== null;

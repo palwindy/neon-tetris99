@@ -24,6 +24,7 @@ const CPU_REN_TABLE = [
 
 export interface UseTetrisGameProps {
     gameMode?: GameMode;
+    cpuLevel?: number; // VS CPU モードの難易度 (1-5)。HP = cpuLevel * 10 で固定
     onGameOver?: () => void;
     onLineClear?: (lines: number) => void;
     onTSpin?: (lines: number) => void;
@@ -33,6 +34,7 @@ export interface UseTetrisGameProps {
 
 export const useTetrisGame = ({
     gameMode: initialGameMode = 'SINGLE',
+    cpuLevel = 3,
     onGameOver,
     onLineClear,
     onTSpin,
@@ -222,11 +224,9 @@ export const useTetrisGame = ({
 
         attackTimerRef.current = window.setTimeout(() => {
             queueAttack();
-            // Once an attack fires, the "remaining time" from any previous pause is consumed.
-            // Start fresh interval.
             remainingAttackTimeRef.current = 0;
-            const newInterval = Math.max(3000, 8000 - (level * 200));
-            scheduleAttack(newInterval);
+            // 攻撃間隔は固定5秒（レベルに関係なく一定）
+            scheduleAttack(5000);
         }, delay);
     };
 
@@ -235,7 +235,7 @@ export const useTetrisGame = ({
     if (remainingAttackTimeRef.current > 0) {
         delay = remainingAttackTimeRef.current;
     } else {
-        delay = Math.max(3000, 8000 - (level * 200));
+        delay = 5000; // 攻撃間隔固定5秒
     }
 
     scheduleAttack(delay);
@@ -251,7 +251,7 @@ export const useTetrisGame = ({
             remainingAttackTimeRef.current = remaining;
         }
     };
-  }, [gameStarted, paused, gameOver, isWinner, gameMode, level]);
+  }, [gameStarted, paused, gameOver, isWinner, gameMode]);
 
   const getNextFromQueue = useCallback((currentQueue: TetrominoType[]) => {
     let newQueue = [...currentQueue];
@@ -1046,7 +1046,7 @@ useEffect(() => {
     setClearingRows([]);
     setSpecialMessage(null);
     if (mode) setGameMode(mode);
-    setCpuHealth(100);
+    setCpuHealth(cpuLevel * 10); // HP = レベル × 10（Lv1=10, Lv2=20, ..., Lv5=50）
     setNextAttackTime(0);
     setPendingGarbage(0); // Reset pending garbage
     remainingAttackTimeRef.current = 0; // Reset CPU attack timer ref

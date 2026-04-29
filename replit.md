@@ -31,6 +31,7 @@ Configured as a static site:
 - Public directory: `dist`
 
 ## Version History
+- **5.13** — (1) 3人対戦時のミニ画面・ホールド表示ズレ修正（SidePanel の `h-[94vh]` → `h-full`）。(2) コントローラーデフォルトマッピングを横画面標準に整理し、Bluetooth/PS系 axes[0]/axes[1] によるDPad代替にも対応。(3) VS CPU レベル差をHP増減に変更（攻撃間隔は一定5秒、HP = レベル×10：Lv1=10、Lv5=50）。(4) キーボード・ゲームパッドの左右長押しにDAS/ARR（DAS=150ms, ARR=50ms）を実装して本家T99準拠のスムーズ移動を実現。
 - **5.12** — ゲーム盤面が上下切れる問題を修正（`h-[94vh]` → `h-full`）。ForcedLandscape の回転方向を時計回り90°から反時計回り90°に変更（端末を縦持ち時、端末上端が画面左になる向き）。
 - **5.11** — VS CPU のレベル選択画面を復活（タイトル「VS CPU」押下時にレベル 1〜5 のモーダル表示 → 選択後にカウントダウン開始）。今後コード改変ごとに `App.tsx` の `version` を 0.01 ずつ昇順更新するルールを採用。
 - **5.10** — (1) ゲーム画面を全画面強制横向き表示化（縦持ち端末は CSS 90° 回転、`PortraitLayout` 廃止し `LandscapeLayout` 単独運用）。(2) カウントダウン後の最初のミノが NEXT 先頭と一致するよう修正（`resetGame` で初手をボードに置かず、`startGame` で NEXT 先頭を spawn）。(3) ハードドロップ後の操作猶予を廃止し、本家 TETRIS 99 同様に着地即確定（`hardDrop` 内で `lockPiece` を即時呼び出し）。

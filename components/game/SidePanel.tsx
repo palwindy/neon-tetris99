@@ -33,7 +33,7 @@ export function SidePanel({
   const pauseDisabled = gameMode === 'MULTI';
 
   return (
-    <div className={`flex flex-col items-center justify-between pt-4 pb-4 ${isPortrait ? 'w-16 h-full' : 'w-12 h-[94vh]'} relative`}>
+    <div className={`flex flex-col items-center justify-between pt-4 pb-4 ${isPortrait ? 'w-16 h-full' : 'w-12 h-full'} relative`}>
       <div className="flex flex-col items-center">
         <GarbageGauge pendingGarbage={pendingGarbage} variant={variant} />
 
