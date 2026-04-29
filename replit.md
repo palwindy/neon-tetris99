@@ -31,6 +31,7 @@ Configured as a static site:
 - Public directory: `dist`
 
 ## Version History
+- **5.11** — VS CPU のレベル選択画面を復活（タイトル「VS CPU」押下時にレベル 1〜5 のモーダル表示 → 選択後にカウントダウン開始）。今後コード改変ごとに `App.tsx` の `version` を 0.01 ずつ昇順更新するルールを採用。
 - **5.10** — (1) ゲーム画面を全画面強制横向き表示化（縦持ち端末は CSS 90° 回転、`PortraitLayout` 廃止し `LandscapeLayout` 単独運用）。(2) カウントダウン後の最初のミノが NEXT 先頭と一致するよう修正（`resetGame` で初手をボードに置かず、`startGame` で NEXT 先頭を spawn）。(3) ハードドロップ後の操作猶予を廃止し、本家 TETRIS 99 同様に着地即確定（`hardDrop` 内で `lockPiece` を即時呼び出し）。
 - **5.02** — VS MULTI 複数人バグ修正。ホスト「部屋を作る」押下時に Firebase 上の未使用 4 桁 ROOM ID を毎回発行し、別の人の進行中ルームを偶然踏み潰さないようにした（複数人が同時に別部屋でプレイ可能）。
 - **5.00** — VS MULTI を 3 人対戦対応に拡張。ホストが各枠を HUMAN/CPU(Lv1-5) で個別指定。攻撃は全相手に同火力同時送信、最後の 1 人になるまで継続（T99 形式）。VS CPU 1on1 を VS MULTI 内へ統合（GameMode `MULTI_CPU` 廃止）。VS MULTI 中は PAUSE 無効化。

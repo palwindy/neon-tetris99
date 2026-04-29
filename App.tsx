@@ -14,8 +14,9 @@ import SettingsModal from './components/ui/SettingsModal';
 import TitleScreen from './components/ui/TitleScreen';
 import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 import SplashScreen from './components/ui/SplashScreen';
+import CpuLevelSelectModal from './components/ui/CpuLevelSelectModal';
 
-const version = "5.10";
+const version = "5.11";
 
 /**
  * 端末が縦持ち（ポートレート）の時、内側コンテンツを強制的に
@@ -65,6 +66,8 @@ function App() {
   const [showTitle,    setShowTitle]    = useState(true);
   const [showSplash,   setShowSplash]   = useState(true);
   const [showSettings, setShowSettings] = useState(false);
+  const [showCpuLevel, setShowCpuLevel] = useState(false);
+  const [cpuLevel,     setCpuLevel]     = useState<1 | 2 | 3 | 4 | 5>(3);
 
   // --- ゲームコア ---
   const handleAttackSent = useCallback((lines: number) => {
@@ -173,6 +176,20 @@ function App() {
     runCountdownSequence(mode);
   }, [runCountdownSequence]);
 
+  const handleStartCpu = useCallback(() => {
+    setShowCpuLevel(true);
+  }, []);
+
+  const handleCpuLevelSelected = useCallback((lv: 1 | 2 | 3 | 4 | 5) => {
+    setCpuLevel(lv);
+    setShowCpuLevel(false);
+    handleStartGame('CPU');
+  }, [handleStartGame]);
+
+  const handleCpuLevelCancel = useCallback(() => {
+    setShowCpuLevel(false);
+  }, []);
+
   const handleMultiplayerGameStart = useCallback((_roomId: string, _players: MultiPlayer[]) => {
     setCurrentScreen('game');
     multiplayerService.updateStatus('playing');
@@ -250,9 +267,16 @@ function App() {
           <TitleScreen
             version={version}
             onStartSingle={() => handleStartGame('SINGLE')}
-            onStartCpu={() => handleStartGame('CPU')}
+            onStartCpu={handleStartCpu}
             onStartMulti={() => { setShowTitle(false); setCurrentScreen('matching'); }}
             onOpenSettings={() => setShowSettings(true)}
+          />
+        )}
+
+        {showCpuLevel && (
+          <CpuLevelSelectModal
+            onSelect={handleCpuLevelSelected}
+            onCancel={handleCpuLevelCancel}
           />
         )}
 
