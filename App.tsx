@@ -16,7 +16,7 @@ import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 import SplashScreen from './components/ui/SplashScreen';
 import CpuLevelSelectModal from './components/ui/CpuLevelSelectModal';
 
-const version = "5.11";
+const version = "5.12";
 
 /**
  * 端末が縦持ち（ポートレート）の時、内側コンテンツを強制的に
@@ -47,11 +47,11 @@ const ForcedLandscape: React.FC<{ children: React.ReactNode }> = ({ children }) 
     <div
       style={{
         position: 'fixed',
-        top: 0,
-        left: '100vw',
+        top: '100vh',
+        left: 0,
         width: '100vh',
         height: '100vw',
-        transform: 'rotate(90deg)',
+        transform: 'rotate(-90deg)',
         transformOrigin: 'top left',
         overflow: 'hidden',
       }}

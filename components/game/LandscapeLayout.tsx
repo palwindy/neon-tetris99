@@ -102,7 +102,7 @@ export function LandscapeLayout({
           variant="landscape"
         />
 
-        <div className="relative h-[94vh] aspect-[1/2] shadow-2xl flex items-start">
+        <div className="relative h-full aspect-[1/2] shadow-2xl flex items-start">
           <TetrisBoard
             grid={grid}
             activeShape={activeShape}
