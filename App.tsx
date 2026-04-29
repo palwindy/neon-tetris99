@@ -227,47 +227,45 @@ function App() {
       onClick={() => audioService.tryResumeContext()}
       onTouchStart={() => audioService.tryResumeContext()}
     >
-      {showSplash && (
-        <SplashScreen
-          onStart={() => audioService.init()}
-          complete={audioReady}
-          onDone={() => setShowSplash(false)}
-        />
-      )}
+      <ForcedLandscape>
+        {showSplash && (
+          <SplashScreen
+            onStart={() => audioService.init()}
+            complete={audioReady}
+            onDone={() => setShowSplash(false)}
+          />
+        )}
 
-      {!showSplash && (
-        <ForcedLandscape>
-          <LandscapeLayout {...layoutProps} />
+        {!showSplash && <LandscapeLayout {...layoutProps} />}
 
-          {currentScreen === 'matching' && (
-            <MatchingScreen
-              onGameStart={handleMultiplayerGameStart}
-              onBack={() => { setShowTitle(true); setCurrentScreen('title'); }}
-              onOpenSettings={() => setShowSettings(true)}
-            />
-          )}
+        {!showSplash && currentScreen === 'matching' && (
+          <MatchingScreen
+            onGameStart={handleMultiplayerGameStart}
+            onBack={() => { setShowTitle(true); setCurrentScreen('title'); }}
+            onOpenSettings={() => setShowSettings(true)}
+          />
+        )}
 
-          {showTitle && (
-            <TitleScreen
-              version={version}
-              onStartSingle={() => handleStartGame('SINGLE')}
-              onStartCpu={() => handleStartGame('CPU')}
-              onStartMulti={() => { setShowTitle(false); setCurrentScreen('matching'); }}
-              onOpenSettings={() => setShowSettings(true)}
-            />
-          )}
+        {!showSplash && showTitle && (
+          <TitleScreen
+            version={version}
+            onStartSingle={() => handleStartGame('SINGLE')}
+            onStartCpu={() => handleStartGame('CPU')}
+            onStartMulti={() => { setShowTitle(false); setCurrentScreen('matching'); }}
+            onOpenSettings={() => setShowSettings(true)}
+          />
+        )}
 
-          {showSettings && (
-            <SettingsModal
-              onClose={() => setShowSettings(false)}
-              bgmOn={bgmOn} seOn={seOn}
-              onBgmToggle={handleBgmToggle} onSeToggle={handleSeToggle}
-              mapping={mapping} isRemapping={isRemapping} remapAction={remapAction}
-              startRemap={startRemap} cancelRemap={cancelRemap} resetMapping={resetMapping}
-            />
-          )}
-        </ForcedLandscape>
-      )}
+        {showSettings && (
+          <SettingsModal
+            onClose={() => setShowSettings(false)}
+            bgmOn={bgmOn} seOn={seOn}
+            onBgmToggle={handleBgmToggle} onSeToggle={handleSeToggle}
+            mapping={mapping} isRemapping={isRemapping} remapAction={remapAction}
+            startRemap={startRemap} cancelRemap={cancelRemap} resetMapping={resetMapping}
+          />
+        )}
+      </ForcedLandscape>
     </div>
   );
 }

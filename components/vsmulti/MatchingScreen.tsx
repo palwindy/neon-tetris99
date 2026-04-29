@@ -32,7 +32,6 @@ export const MatchingScreen: React.FC<MatchingScreenProps> = ({ onGameStart, onB
   const [players, setPlayers] = useState<MultiPlayer[]>([]);
   const [config, setConfig] = useState<RoomConfig | null>(null);
 
-  // ホスト設定（部屋を作るときの設定）
   const [hostRoomSize, setHostRoomSize] = useState<2 | 3>(2);
   const [hostSlot1, setHostSlot1] = useState<SlotConfig>({ kind: 'HUMAN' });
   const [hostSlot2, setHostSlot2] = useState<SlotConfig>({ kind: 'CPU', cpuLevel: 3 });
@@ -50,7 +49,6 @@ export const MatchingScreen: React.FC<MatchingScreenProps> = ({ onGameStart, onB
   const myStatus = me?.status;
   const humanPlayers = players.filter(p => !p.isCpu);
 
-  // 全 HUMAN 参加者が ready で、必要人数が揃ったら開始
   useEffect(() => {
     if (!joined || !config) return;
     const expectedHumans = 1 + config.slots.filter(s => s.kind === 'HUMAN').length;
@@ -69,7 +67,6 @@ export const MatchingScreen: React.FC<MatchingScreenProps> = ({ onGameStart, onB
 
   const handleCreate = async () => {
     audioService.playOk();
-    // 他人が使用中のルーム ID と衝突しないよう、毎回 Firebase 上で未使用の 4 桁を発行
     const freshId = await multiplayerService.generateUniqueRoomId();
     setRoomId(freshId);
     await multiplayerService.joinRoom(freshId, buildHostSlots());
@@ -102,7 +99,6 @@ export const MatchingScreen: React.FC<MatchingScreenProps> = ({ onGameStart, onB
     setPlayers([]);
   };
 
-  // 表示用の枠リスト（ホスト=index 0、相手枠=index 1..N）
   const slotsView = useMemo(() => {
     if (joined && config) {
       return [{ kind: 'HUMAN' as const, slotIndex: 0, isHost: true }, ...config.slots.map((s, i) => ({ ...s, slotIndex: i + 1, isHost: false }))];
@@ -113,92 +109,103 @@ export const MatchingScreen: React.FC<MatchingScreenProps> = ({ onGameStart, onB
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col"
-      style={{ background: 'rgba(5,5,20,0.85)', backdropFilter: 'blur(18px) saturate(1.4)' }}>
+      style={{ background: 'rgba(5,5,20,0.92)', backdropFilter: 'blur(18px) saturate(1.4)' }}>
 
-      <div className="flex items-center justify-between px-4 py-3 shrink-0">
+      {/* ヘッダー（コンパクト） */}
+      <div className="flex items-center justify-between px-4 py-2 shrink-0 border-b border-gray-800/60">
         <button onClick={handleBack} className="p-1 text-gray-400 hover:text-white active:scale-95">
-          <X size={24} />
+          <X size={20} />
         </button>
-        <h1 className="text-xl font-black tracking-widest"
+        <h1 className="text-lg font-black tracking-widest"
           style={{ color: '#e040fb', textShadow: '0 0 12px #e040fb,0 0 24px #7c4dff' }}>
           VS MULTI
         </h1>
-        <button onClick={onOpenSettings}
-          className="p-2 rounded-lg border border-gray-700 bg-gray-800/60 text-gray-400 hover:text-white active:scale-95">
-          <Settings size={16} />
-        </button>
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-4 pb-4 flex flex-col gap-3">
-        {!joined && (
-          <div className="flex gap-2">
-            <button onClick={() => setMode('host')}
-              className={`flex-1 py-2 rounded-lg font-bold text-sm tracking-wider transition-all ${mode === 'host' ? 'bg-purple-600 text-white shadow-[0_0_10px_#a855f7]' : 'bg-gray-800 text-gray-400'}`}>
-              部屋を作る
-            </button>
-            <button onClick={() => setMode('guest')}
-              className={`flex-1 py-2 rounded-lg font-bold text-sm tracking-wider transition-all ${mode === 'guest' ? 'bg-cyan-600 text-white shadow-[0_0_10px_#06b6d4]' : 'bg-gray-800 text-gray-400'}`}>
-              部屋に参加
-            </button>
-          </div>
-        )}
-
-        <div className="rounded-xl border border-purple-500/40 bg-black/40 p-3 text-center">
-          <p className="text-xs text-gray-400 mb-1 tracking-widest">ROOM ID</p>
-          <div className="flex items-center justify-center gap-3">
-            <span className="text-3xl font-black tracking-[0.3em]"
-              style={{ color: '#e040fb', textShadow: '0 0 16px #e040fb' }}>
-              {roomId}
-            </span>
+        <div className="flex items-center gap-2">
+          {/* ROOM ID バッジ */}
+          <div className="flex items-center gap-2 rounded-lg border border-purple-500/40 bg-black/40 px-3 py-1">
+            <span className="text-xs text-gray-400 tracking-widest">ROOM</span>
+            <span className="text-lg font-black tracking-[0.2em]"
+              style={{ color: '#e040fb', textShadow: '0 0 10px #e040fb' }}>{roomId}</span>
             <button onClick={handleCopy}
-              className="text-xs px-2 py-1 rounded border border-purple-400/50 text-purple-300 hover:bg-purple-900/40">
+              className="text-[10px] px-1.5 py-0.5 rounded border border-purple-400/50 text-purple-300 hover:bg-purple-900/40">
               {copied ? '✓' : 'コピー'}
             </button>
           </div>
+          <button onClick={onOpenSettings}
+            className="p-2 rounded-lg border border-gray-700 bg-gray-800/60 text-gray-400 hover:text-white active:scale-95">
+            <Settings size={15} />
+          </button>
         </div>
+      </div>
 
-        {!joined && mode === 'host' && (
-          <div className="rounded-xl border border-purple-500/40 bg-black/40 p-3 flex flex-col gap-3">
-            <div>
-              <p className="text-[11px] text-purple-300 font-bold tracking-widest mb-2">ROOM SIZE</p>
-              <div className="grid grid-cols-2 gap-2">
-                {[2, 3].map(size => (
-                  <button key={size} onClick={() => { setHostRoomSize(size as 2 | 3); audioService.playOk(); }}
-                    className={`py-2 rounded font-bold text-sm border transition-all ${hostRoomSize === size ? 'bg-purple-600 text-white border-purple-300 shadow-[0_0_8px_#a855f7]' : 'bg-transparent text-purple-200 border-purple-500/40'}`}>
-                    {size}人対戦
-                  </button>
-                ))}
-              </div>
-            </div>
-            <SlotPicker label="OPPONENT 1" value={hostSlot1} onChange={setHostSlot1} />
-            {hostRoomSize === 3 && (
-              <SlotPicker label="OPPONENT 2" value={hostSlot2} onChange={setHostSlot2} />
-            )}
-            <button onClick={handleCreate}
-              className="w-full py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black tracking-widest shadow-[0_0_16px_#a855f7]">
-              この設定で部屋を作る
-            </button>
-          </div>
-        )}
-
-        {!joined && mode === 'guest' && (
-          <div className="rounded-xl border border-cyan-500/40 bg-black/40 p-3">
-            <p className="text-xs text-cyan-200 mb-2 tracking-widest text-center">参加するROOM ID</p>
+      {/* メインエリア — 横向き2カラム */}
+      <div className="flex-1 flex flex-row overflow-hidden">
+        {/* 左カラム: 設定フォーム */}
+        <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-3 border-r border-gray-800/60 min-w-0">
+          {!joined && (
             <div className="flex gap-2">
-              <input type="text" inputMode="numeric" pattern="\d{4}" maxLength={4} placeholder="0000"
-                value={inputRoomId}
-                onChange={e => setInputRoomId(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                className="flex-1 bg-black/60 border border-gray-600 rounded-lg px-3 py-2 text-white text-center text-xl tracking-[0.3em] font-bold focus:border-cyan-400 outline-none" />
-              <button disabled={inputRoomId.length !== 4} onClick={handleJoin}
-                className={`px-4 py-2 rounded-lg font-bold text-sm tracking-wide ${inputRoomId.length === 4 ? 'bg-cyan-600 hover:bg-cyan-500 text-white' : 'bg-gray-800 text-gray-600'}`}>
-                参加
+              <button onClick={() => setMode('host')}
+                className={`flex-1 py-2 rounded-lg font-bold text-sm tracking-wider transition-all ${mode === 'host' ? 'bg-purple-600 text-white shadow-[0_0_10px_#a855f7]' : 'bg-gray-800 text-gray-400'}`}>
+                部屋を作る
+              </button>
+              <button onClick={() => setMode('guest')}
+                className={`flex-1 py-2 rounded-lg font-bold text-sm tracking-wider transition-all ${mode === 'guest' ? 'bg-cyan-600 text-white shadow-[0_0_10px_#06b6d4]' : 'bg-gray-800 text-gray-400'}`}>
+                部屋に参加
               </button>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* 参加プレイヤー枠 (JOIN 後の WAITING ROOM) */}
-        <div className="flex flex-col gap-2">
+          {!joined && mode === 'host' && (
+            <div className="rounded-xl border border-purple-500/40 bg-black/40 p-3 flex flex-col gap-3">
+              <div>
+                <p className="text-[11px] text-purple-300 font-bold tracking-widest mb-2">ROOM SIZE</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {[2, 3].map(size => (
+                    <button key={size} onClick={() => { setHostRoomSize(size as 2 | 3); audioService.playOk(); }}
+                      className={`py-2 rounded font-bold text-sm border transition-all ${hostRoomSize === size ? 'bg-purple-600 text-white border-purple-300 shadow-[0_0_8px_#a855f7]' : 'bg-transparent text-purple-200 border-purple-500/40'}`}>
+                      {size}人対戦
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <SlotPicker label="OPPONENT 1" value={hostSlot1} onChange={setHostSlot1} />
+              {hostRoomSize === 3 && (
+                <SlotPicker label="OPPONENT 2" value={hostSlot2} onChange={setHostSlot2} />
+              )}
+              <button onClick={handleCreate}
+                className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black tracking-widest shadow-[0_0_16px_#a855f7] text-sm">
+                この設定で部屋を作る
+              </button>
+            </div>
+          )}
+
+          {!joined && mode === 'guest' && (
+            <div className="rounded-xl border border-cyan-500/40 bg-black/40 p-3">
+              <p className="text-xs text-cyan-200 mb-2 tracking-widest text-center">参加するROOM ID</p>
+              <div className="flex gap-2">
+                <input type="text" inputMode="numeric" pattern="\d{4}" maxLength={4} placeholder="0000"
+                  value={inputRoomId}
+                  onChange={e => setInputRoomId(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                  className="flex-1 bg-black/60 border border-gray-600 rounded-lg px-3 py-2 text-white text-center text-xl tracking-[0.3em] font-bold focus:border-cyan-400 outline-none" />
+                <button disabled={inputRoomId.length !== 4} onClick={handleJoin}
+                  className={`px-4 py-2 rounded-lg font-bold text-sm tracking-wide ${inputRoomId.length === 4 ? 'bg-cyan-600 hover:bg-cyan-500 text-white' : 'bg-gray-800 text-gray-600'}`}>
+                  参加
+                </button>
+              </div>
+            </div>
+          )}
+
+          {joined && (
+            <button onClick={handleResetRoom}
+              className="w-full py-2 rounded-lg text-gray-400 text-xs hover:text-white border border-gray-700">
+              部屋を抜ける
+            </button>
+          )}
+        </div>
+
+        {/* 右カラム: プレイヤー一覧 + READYボタン */}
+        <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-2 min-w-0">
+          <p className="text-[11px] text-gray-500 font-bold tracking-widest mb-1">PLAYERS</p>
           {slotsView.map(slot => {
             const playerForSlot = players.find(p => p.slotIndex === slot.slotIndex);
             return (
@@ -210,21 +217,17 @@ export const MatchingScreen: React.FC<MatchingScreenProps> = ({ onGameStart, onB
               />
             );
           })}
-        </div>
 
-        {joined && (
-          <div className="flex flex-col gap-2">
-            <button onClick={handleReady}
-              disabled={myStatus === 'ready'}
-              className={`w-full py-3 rounded-xl font-black text-base tracking-widest transition-all ${myStatus === 'ready' ? 'bg-green-700 text-green-200' : 'bg-purple-600 hover:bg-purple-500 text-white shadow-[0_0_12px_#a855f7]'}`}>
-              {myStatus === 'ready' ? '✓ 準備完了！相手を待機中' : '準備完了'}
-            </button>
-            <button onClick={handleResetRoom}
-              className="w-full py-2 rounded-lg text-gray-400 text-xs hover:text-white border border-gray-700">
-              部屋を抜ける
-            </button>
-          </div>
-        )}
+          {joined && (
+            <div className="mt-auto pt-2">
+              <button onClick={handleReady}
+                disabled={myStatus === 'ready'}
+                className={`w-full py-3 rounded-xl font-black text-sm tracking-widest transition-all ${myStatus === 'ready' ? 'bg-green-700 text-green-200' : 'bg-purple-600 hover:bg-purple-500 text-white shadow-[0_0_12px_#a855f7]'}`}>
+                {myStatus === 'ready' ? '✓ 準備完了！相手を待機中' : '準備完了'}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -283,14 +286,14 @@ const SlotCard: React.FC<SlotCardProps> = ({ slot, player, isMe, myName }) => {
   const name = isMe ? myName : (player?.name ?? (isCpu ? `CPU LV.${slot.cpuLevel ?? 3}` : '待機中…'));
 
   return (
-    <div className={`rounded-xl border p-3 flex items-center justify-between transition-all ${ready ? 'border-green-400 shadow-[0_0_10px_#4ade80]' : isCpu ? 'border-cyan-500/50' : 'border-purple-500/50'} bg-black/40`}>
-      <div className="flex items-center gap-3">
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isCpu ? 'bg-cyan-900/50 text-cyan-300' : 'bg-purple-900/50 text-purple-200'}`}>
-          {isCpu ? <Bot size={20} /> : <User size={20} />}
+    <div className={`rounded-xl border p-2.5 flex items-center justify-between transition-all ${ready ? 'border-green-400 shadow-[0_0_10px_#4ade80]' : isCpu ? 'border-cyan-500/50' : 'border-purple-500/50'} bg-black/40`}>
+      <div className="flex items-center gap-2">
+        <div className={`w-9 h-9 rounded-full flex items-center justify-center ${isCpu ? 'bg-cyan-900/50 text-cyan-300' : 'bg-purple-900/50 text-purple-200'}`}>
+          {isCpu ? <Bot size={18} /> : <User size={18} />}
         </div>
         <div>
           <p className="text-[10px] tracking-widest text-gray-400 font-bold">{label}</p>
-          <p className="text-sm font-bold text-white truncate max-w-[180px]">{name}</p>
+          <p className="text-sm font-bold text-white truncate max-w-[150px]">{name}</p>
         </div>
       </div>
       <span className={`text-[10px] font-bold tracking-widest px-2 py-0.5 rounded-full ${isCpu ? 'bg-cyan-500/30 text-cyan-200' : ready ? 'bg-green-500/30 text-green-200' : player ? 'bg-purple-500/30 text-purple-200' : 'bg-gray-700 text-gray-500'}`}>

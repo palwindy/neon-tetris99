@@ -3,7 +3,7 @@ import { User, Bot, Users, Settings } from 'lucide-react';
 import { audioService } from '../../services/audioService';
 
 const TitleLogo = () => (
-  <div className="mb-8 landscape:mb-4 relative flex flex-col items-center landscape:scale-75 landscape:origin-top">
+  <div className="mb-3 relative flex flex-col items-center scale-75 origin-top">
     <h1 className="text-7xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-cyan-400 via-purple-500 to-pink-500 transform -skew-x-12 leading-none">NEON</h1>
     <h1 className="text-4xl font-black italic tracking-tighter text-white transform -skew-x-12 -mt-1 leading-none">TETRIS</h1>
     <h1 className="text-8xl font-black italic tracking-tighter text-white transform -skew-x-12 -mt-4 drop-shadow-[0_0_20px_rgba(6,182,212,1)] leading-none">99</h1>
@@ -28,7 +28,6 @@ const TitleScreen: React.FC<TitleScreenProps> = ({ version, onStartSingle, onSta
     audioService.playOk();
     setTimeout(() => {
       action();
-      // setTimeout 内で遷移するので、戻ってきた時のために cleanup は必要だが一瞬で消える
     }, 600);
   };
 
@@ -38,20 +37,20 @@ const TitleScreen: React.FC<TitleScreenProps> = ({ version, onStartSingle, onSta
       
       <TitleLogo />
 
-      <div className="flex flex-col landscape:flex-row gap-3 mb-6 w-full max-w-[260px] landscape:max-w-[700px] px-4 justify-center">
+      <div className="flex flex-row gap-3 mb-4 w-full max-w-[700px] px-4 justify-center">
         <button onClick={() => handleSelect('single', onStartSingle)}
           disabled={selecting !== null}
-          className={`w-full landscape:flex-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-3 landscape:py-2 rounded-full shadow-[0_0_20px_rgba(147,51,234,0.5)] active:scale-95 text-lg landscape:text-base tracking-wider hover:brightness-110 transition-all flex items-center justify-center gap-2 ${selecting === 'single' ? 'animate-blink' : ''}`}>
-          <User size={20} /> SINGLE PLAY
+          className={`flex-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-2 rounded-full shadow-[0_0_20px_rgba(147,51,234,0.5)] active:scale-95 text-base tracking-wider hover:brightness-110 transition-all flex items-center justify-center gap-2 ${selecting === 'single' ? 'animate-blink' : ''}`}>
+          <User size={18} /> SINGLE
         </button>
         <button onClick={() => handleSelect('cpu', onStartCpu)}
           disabled={selecting !== null}
-          className={`w-full landscape:flex-1 bg-gray-800/80 border border-gray-600 text-gray-300 font-bold py-2 rounded-full shadow-lg active:scale-95 tracking-wide hover:bg-gray-700 transition-all hover:text-white hover:border-gray-500 flex items-center justify-center gap-2 ${selecting === 'cpu' ? 'animate-blink' : ''}`}>
+          className={`flex-1 bg-gray-800/80 border border-gray-600 text-gray-300 font-bold py-2 rounded-full shadow-lg active:scale-95 tracking-wide hover:bg-gray-700 transition-all hover:text-white hover:border-gray-500 flex items-center justify-center gap-2 ${selecting === 'cpu' ? 'animate-blink' : ''}`}>
           <Bot size={18} /> VS CPU
         </button>
         <button onClick={() => handleSelect('multi', onStartMulti)}
           disabled={selecting !== null}
-          className={`w-full landscape:flex-1 bg-gray-800/80 border border-gray-600 text-gray-300 font-bold py-2 rounded-full shadow-lg active:scale-95 tracking-wide hover:bg-gray-700 transition-all hover:text-white hover:border-gray-500 flex items-center justify-center gap-2 ${selecting === 'multi' ? 'animate-blink' : ''}`}>
+          className={`flex-1 bg-gray-800/80 border border-gray-600 text-gray-300 font-bold py-2 rounded-full shadow-lg active:scale-95 tracking-wide hover:bg-gray-700 transition-all hover:text-white hover:border-gray-500 flex items-center justify-center gap-2 ${selecting === 'multi' ? 'animate-blink' : ''}`}>
           <Users size={18} /> VS MULTI
         </button>
       </div>
@@ -63,7 +62,7 @@ const TitleScreen: React.FC<TitleScreenProps> = ({ version, onStartSingle, onSta
         </button>
       </div>
       
-      <p className="mt-6 text-[10px] text-gray-700 tracking-widest">v{version}</p>
+      <p className="mt-4 text-[10px] text-gray-700 tracking-widest">v{version}</p>
     </div>
   );
 };

@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 
 interface SplashScreenProps {
-  onStart: () => void;    // タップ時に呼ぶ（オーディオ初期化）
-  complete: boolean;      // true になったらフェードアウト → onDone
-  onDone: () => void;     // フェードアウト終了後にタイトルへ遷移
+  onStart: () => void;
+  complete: boolean;
+  onDone: () => void;
 }
 
 const SplashScreen: React.FC<SplashScreenProps> = ({ onStart, complete, onDone }) => {
@@ -11,11 +11,10 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onStart, complete, onDone }
 
   const handleInteraction = () => {
     if (phase !== 'waiting') return;
-    onStart(); // オーディオコンテキストの初期化などをキック
+    onStart();
     setPhase('loading');
   };
 
-  // complete フラグが立ったらフェードアウト開始
   useEffect(() => {
     console.log(`[SplashScreen] Phase check: ${phase}, complete: ${complete}`);
     if (complete && phase === 'loading') {
@@ -24,12 +23,10 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onStart, complete, onDone }
       const timer = setTimeout(() => {
         console.log('[SplashScreen] Calling onDone');
         onDone();
-      }, 800); // フェードアウト時間
+      }, 800);
       return () => clearTimeout(timer);
     }
   }, [complete, phase, onDone]);
-
-  // onClick / onTouchStart を削除し、自動進行に完全委託
 
   return (
     <div
@@ -42,10 +39,9 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onStart, complete, onDone }
         ${phase === 'fading' ? 'opacity-0 pointer-events-none' : 'opacity-100 pointer-events-auto'}
       `}
     >
-      {/* ロゴ */}
-      <div className="flex flex-col items-center mb-8">
-        <div className="relative">
-          {/* グロー効果 */}
+      {/* ロゴ — 横向き表示エリア（高さ≒端末幅）に収まるようコンパクトに */}
+      <div className="flex flex-col items-center mb-4">
+        <div className="relative scale-75 origin-center">
           <div className="absolute -inset-8 bg-purple-300/30 blur-3xl rounded-full animate-pulse" />
           <h1
             className="text-8xl font-black italic tracking-tighter text-transparent bg-clip-text relative"
@@ -55,15 +51,15 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onStart, complete, onDone }
           </h1>
         </div>
         <h2
-          className="text-7xl font-black tracking-widest relative"
+          className="text-6xl font-black tracking-widest relative -mt-2"
           style={{ color: '#1a1a2e', textShadow: '0 0 40px rgba(6,182,212,0.3)' }}
         >
           TETRIS<span className="text-purple-600">99</span>
         </h2>
       </div>
 
-      {/* 状態テキスト / タップ誘導 */}
-      <div className="absolute bottom-16 w-full flex flex-col items-center">
+      {/* 状態テキスト */}
+      <div className="absolute bottom-6 w-full flex flex-col items-center">
         {phase === 'waiting' ? (
           <p className="text-gray-400 font-bold tracking-[0.4em] animate-pulse text-sm">
             -- TAP START --
@@ -78,7 +74,6 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onStart, complete, onDone }
   );
 };
 
-// ドットアニメーション付き Loading...
 const LoadingDots: React.FC = () => {
   const [dots, setDots] = useState('');
   useEffect(() => {

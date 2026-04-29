@@ -22,23 +22,23 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   mapping, isRemapping, remapAction, startRemap, cancelRemap, resetMapping,
 }) => {
   const handleClose = () => { audioService.playCancel(); onClose(); };
-  
+
   return (
-    <div className="fixed inset-0 bg-neutral-950/95 flex flex-col items-center z-[120] p-4 animate-in fade-in duration-200">
-      <div className="w-full max-w-md flex flex-col h-full">
-        <div className="flex justify-between items-center mb-6 border-b border-gray-800 pb-2">
-          <h2 className="text-xl font-bold flex items-center gap-2 text-cyan-400">
-            <Gamepad2 /> Controller Settings
-          </h2>
-          <button onClick={handleClose} className="p-2 hover:bg-gray-800 rounded-full">
-            <X className="text-gray-400" />
-          </button>
-        </div>
+    <div className="fixed inset-0 bg-neutral-950/95 flex flex-col z-[120] animate-in fade-in duration-200">
+      {/* ヘッダー */}
+      <div className="flex justify-between items-center px-5 py-2 border-b border-gray-800 shrink-0">
+        <h2 className="text-lg font-bold flex items-center gap-2 text-cyan-400">
+          <Gamepad2 size={18} /> Controller Settings
+        </h2>
+        <button onClick={handleClose} className="p-2 hover:bg-gray-800 rounded-full">
+          <X className="text-gray-400" size={18} />
+        </button>
+      </div>
 
-
-      <div className="flex-1 overflow-y-auto space-y-2 pr-2">
-        {/* Audio */}
-        <div className="mb-4 pb-4 border-b border-gray-800">
+      {/* 2カラムレイアウト（横向き向け） */}
+      <div className="flex-1 flex flex-row overflow-hidden">
+        {/* 左カラム: Audio */}
+        <div className="w-56 shrink-0 flex flex-col px-4 py-3 border-r border-gray-800 overflow-y-auto">
           <p className="text-xs text-gray-500 font-bold tracking-widest mb-3 uppercase">Audio</p>
           <div className="flex flex-col gap-3">
             {[
@@ -55,41 +55,48 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               </label>
             ))}
           </div>
-        </div>
 
-        {/* Controller Remap */}
-        {isRemapping && (
-          <div className="mb-4 p-4 bg-purple-900/50 border border-purple-500 rounded-lg text-center animate-pulse">
-            <p className="font-bold text-white mb-1">Waiting for input...</p>
-            <p className="text-sm text-purple-200">Press button for {remapAction}</p>
-            <button onClick={cancelRemap} className="mt-2 text-xs bg-black/30 px-3 py-1 rounded hover:bg-black/50">Cancel</button>
-          </div>
-        )}
-        {(Object.keys(mapping) as ControllerAction[]).map(action => (
-          <div key={action} className="flex justify-between items-center bg-gray-900 p-3 rounded border border-gray-800">
-            <span className="text-gray-300 font-mono text-sm">{action.replace('_', ' ')}</span>
-            <button
-              onClick={() => startRemap(action)}
-              disabled={isRemapping}
-              className="bg-gray-800 hover:bg-gray-700 text-cyan-400 px-4 py-1.5 rounded text-xs font-mono border border-gray-700 min-w-[80px]"
-            >
-              BTN {mapping[action]}
+          {/* フッター */}
+          <div className="mt-auto pt-4 flex flex-col gap-2">
+            <button onClick={resetMapping} className="flex items-center gap-2 text-red-400 hover:text-red-300 text-xs px-2 py-2">
+              <ResetIcon size={13} /> Reset Defaults
+            </button>
+            <button onClick={handleClose} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-full text-sm">
+              Done
             </button>
           </div>
-        ))}
-      </div>
+        </div>
 
-      <div className="mt-4 pt-4 border-t border-gray-800 flex justify-between">
-        <button onClick={resetMapping} className="flex items-center gap-2 text-red-400 hover:text-red-300 text-sm px-4 py-2">
-          <ResetIcon size={14} /> Reset Defaults
-        </button>
-        <button onClick={handleClose} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-6 rounded-full">
-          Done
-        </button>
+        {/* 右カラム: Controller Remap */}
+        <div className="flex-1 overflow-y-auto px-4 py-3">
+          <p className="text-xs text-gray-500 font-bold tracking-widest mb-3 uppercase">Button Mapping</p>
+
+          {isRemapping && (
+            <div className="mb-3 p-3 bg-purple-900/50 border border-purple-500 rounded-lg text-center animate-pulse">
+              <p className="font-bold text-white text-sm mb-1">Waiting for input...</p>
+              <p className="text-xs text-purple-200">Press button for {remapAction}</p>
+              <button onClick={cancelRemap} className="mt-2 text-xs bg-black/30 px-3 py-1 rounded hover:bg-black/50">Cancel</button>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-2">
+            {(Object.keys(mapping) as ControllerAction[]).map(action => (
+              <div key={action} className="flex justify-between items-center bg-gray-900 p-2.5 rounded border border-gray-800">
+                <span className="text-gray-300 font-mono text-xs">{action.replace('_', ' ')}</span>
+                <button
+                  onClick={() => startRemap(action)}
+                  disabled={isRemapping}
+                  className="bg-gray-800 hover:bg-gray-700 text-cyan-400 px-3 py-1 rounded text-xs font-mono border border-gray-700 min-w-[64px]"
+                >
+                  BTN {mapping[action]}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
 };
 
 export default SettingsModal;
