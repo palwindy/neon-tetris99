@@ -6,6 +6,9 @@ import { SidePanel } from './SidePanel';
 import { NextPanel } from './NextPanel';
 import { ScorePanel } from './ScorePanel';
 import { Grid, Position, TetrominoType, MultiPlayer, GameMode } from '../../types';
+import { SingleRecord } from '../../services/recordsService';
+import { formatTime } from '../../services/recordsService';
+import { Timer } from 'lucide-react';
 
 interface OverlayProps {
   playerAttack: number;
@@ -21,6 +24,11 @@ interface OverlayProps {
   onResume: () => void;
   onRetry: () => void;
   onQuitToTitle: () => void;
+  gameMode: GameMode;
+  cpuElapsed: number;
+  cpuResult: { time: number; isNewRecord: boolean } | null;
+  singleTop5: SingleRecord[];
+  singleResult: { rank: number; isNewRecord: boolean } | null;
 }
 
 interface LandscapeLayoutProps {
@@ -78,11 +86,20 @@ export function LandscapeLayout({
     <div className="flex w-full h-full flex-row overflow-hidden relative z-0">
       {/* 左カラム：タイトル + DPad */}
       <div className="flex-1 flex flex-col items-center justify-between pb-1 pt-2 gap-2 bg-gray-900/20 border-r border-gray-800/50 min-w-0">
-        <div className="mt-2 flex items-baseline">
-          <h1 className="text-xs font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">
-            NEON TETRIS 99
-          </h1>
-          <span className="text-xs text-gray-500 ml-1.5">v{version}</span>
+        <div className="mt-2 flex flex-col items-center gap-0.5">
+          <div className="flex items-baseline">
+            <h1 className="text-xs font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">
+              NEON TETRIS 99
+            </h1>
+            <span className="text-xs text-gray-500 ml-1.5">v{version}</span>
+          </div>
+          {/* VS CPU タイマー（ゲーム中） */}
+          {overlayProps.gameMode === 'CPU' && overlayProps.gameStarted && !overlayProps.gameOver && !overlayProps.isWinner && (
+            <div className="flex items-center gap-1 text-[10px] text-cyan-300 font-mono">
+              <Timer size={10} />
+              {formatTime(overlayProps.cpuElapsed)}
+            </div>
+          )}
         </div>
         <div className="mb-2">
           <DPad move={move} hardDrop={hardDrop} />

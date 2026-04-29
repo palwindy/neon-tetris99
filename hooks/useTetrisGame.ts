@@ -58,7 +58,9 @@ export const useTetrisGame = ({
   const [backToBack, setBackToBack] = useState(false);
 
   const [gameMode, setGameMode] = useState<GameMode>('SINGLE');
-  const [cpuHealth, setCpuHealth] = useState(100);
+  const [cpuHealth, setCpuHealth] = useState(0); // 初期0→resetGame()で正確な値にセットされる
+  const cpuLevelRef = useRef(cpuLevel); // ゲームループ内で使えるよう ref 化
+  useEffect(() => { cpuLevelRef.current = cpuLevel; }, [cpuLevel]);
   const [isWinner, setIsWinner] = useState(false);
   const [pendingGarbage, setPendingGarbage] = useState(0); // お邪魔予告ゲージ
   const [lastAttackSent, setLastAttackSent] = useState(0); // エフェクト用などに保持
@@ -559,7 +561,8 @@ export const useTetrisGame = ({
             gameStateRef.current.cpuHealth = nextHealth; // Sync ref
 
             // --- v2.20 CPU Danger BGM Sequence ---
-            if (nextHealth <= 20 && !cpuDangerPlayedRef.current && nextHealth > 0) {
+            const dangerThreshold = cpuLevelRef.current * 4; // 初期HP(lv*20) / 5
+            if (nextHealth <= dangerThreshold && !cpuDangerPlayedRef.current && nextHealth > 0) {
                 cpuDangerPlayedRef.current = true;
                 audioService.playCpuDangerStinger();
             }
@@ -709,7 +712,7 @@ export const useTetrisGame = ({
                 const heightRatio = (BOARD_HEIGHT - highestRow) / BOARD_HEIGHT;
                 let targetPitch = currentBgmPitchRef.current;
                 
-                if (mode === 'CPU' && gameStateRef.current.cpuHealth <= 20) {
+                if (mode === 'CPU' && gameStateRef.current.cpuHealth <= cpuLevelRef.current * 4) {
                     targetPitch = 1.1;
                 } else {
                     if (heightRatio >= 0.8) targetPitch = 1.1;
@@ -782,8 +785,8 @@ export const useTetrisGame = ({
         const heightRatio = (BOARD_HEIGHT - highestRow) / BOARD_HEIGHT;
         let targetPitch = currentBgmPitchRef.current;
         
-        // 1. CPU HP <= 20 は最優先で 1.1倍固定
-        if (mode === 'CPU' && gameStateRef.current.cpuHealth <= 20) {
+        // 1. CPU HP <= dangerThreshold は最優先で 1.1倍固定
+        if (mode === 'CPU' && gameStateRef.current.cpuHealth <= cpuLevelRef.current * 4) {
             targetPitch = 1.1;
         } else {
             // 2. ミノの高さによる判定
@@ -1046,7 +1049,7 @@ useEffect(() => {
     setClearingRows([]);
     setSpecialMessage(null);
     if (mode) setGameMode(mode);
-    setCpuHealth(cpuLevel * 10); // HP = レベル × 10（Lv1=10, Lv2=20, ..., Lv5=50）
+    setCpuHealth(cpuLevel * 20); // HP = レベル × 20（Lv1=20, Lv2=40, ..., Lv5=100）
     setNextAttackTime(0);
     setPendingGarbage(0); // Reset pending garbage
     remainingAttackTimeRef.current = 0; // Reset CPU attack timer ref

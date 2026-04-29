@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useTetrisGame } from './hooks/useTetrisGame';
 import { useGameInput } from './hooks/useGameInput';
 import { useAppAudio } from './hooks/useAppAudio';
@@ -7,6 +7,10 @@ import { useCountdown } from './hooks/useCountdown';
 import { audioService } from './services/audioService';
 import { multiplayerService } from './services/multiplayerService';
 import { cpuOpponentManager } from './services/cpuOpponentManager';
+import {
+  submitCpuTime, submitSingleScore, getSingleRecords, getCpuBestTimes,
+  SingleRecord, CpuBestTimes,
+} from './services/recordsService';
 import { MultiPlayer } from './types';
 
 import { LandscapeLayout } from './components/game/LandscapeLayout';
@@ -16,7 +20,7 @@ import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 import SplashScreen from './components/ui/SplashScreen';
 import CpuLevelSelectModal from './components/ui/CpuLevelSelectModal';
 
-const version = "5.13";
+const version = "5.14";
 
 /**
  * 端末が縦持ち（ポートレート）の時、内側コンテンツを強制的に
@@ -68,6 +72,17 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showCpuLevel, setShowCpuLevel] = useState(false);
   const [cpuLevel,     setCpuLevel]     = useState<1 | 2 | 3 | 4 | 5>(3);
+
+  // VS CPU タイマー
+  const cpuTimerStartRef = useRef<number | null>(null);
+  const cpuTimerTickRef  = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [cpuElapsed, setCpuElapsed] = useState(0); // 秒（小数含む）
+  const [cpuBestTimes, setCpuBestTimes] = useState<CpuBestTimes>(() => getCpuBestTimes());
+  const [cpuResult, setCpuResult] = useState<{ time: number; isNewRecord: boolean } | null>(null);
+
+  // SINGLE ハイスコア
+  const [singleTop5, setSingleTop5]   = useState<SingleRecord[]>(() => getSingleRecords());
+  const [singleResult, setSingleResult] = useState<{ rank: number; isNewRecord: boolean } | null>(null);
 
   // --- ゲームコア ---
   const handleAttackSent = useCallback((lines: number) => {
@@ -170,6 +185,59 @@ function App() {
     return () => clearInterval(id);
   }, [nextAttackTime, gameStarted, gameMode, paused, isWinner]);
 
+  // --- VS CPU タイマー ---
+  // ゲーム開始でタイマー開始、終了でタイマー停止
+  useEffect(() => {
+    if (gameMode !== 'CPU') return;
+    if (gameStarted && !gameOver && !isWinner && !paused) {
+      // タイマー開始（再開時は既存 startRef を引き継ぐ）
+      if (cpuTimerStartRef.current === null) {
+        cpuTimerStartRef.current = Date.now() - cpuElapsed * 1000;
+      }
+      if (!cpuTimerTickRef.current) {
+        cpuTimerTickRef.current = setInterval(() => {
+          if (cpuTimerStartRef.current !== null) {
+            setCpuElapsed((Date.now() - cpuTimerStartRef.current) / 1000);
+          }
+        }, 100);
+      }
+    } else {
+      // 一時停止 or 終了 → タイマー停止
+      if (cpuTimerTickRef.current) {
+        clearInterval(cpuTimerTickRef.current);
+        cpuTimerTickRef.current = null;
+      }
+      if (paused && cpuTimerStartRef.current !== null) {
+        // ポーズ中は elapsed を保持（再開時に offset として使う）
+        // 次の startRef は再開時に再計算される
+        cpuTimerStartRef.current = null;
+      }
+    }
+    return () => {
+      if (cpuTimerTickRef.current) {
+        clearInterval(cpuTimerTickRef.current);
+        cpuTimerTickRef.current = null;
+      }
+    };
+  }, [gameMode, gameStarted, gameOver, isWinner, paused]);
+
+  // 勝利時：タイム確定 & 記録保存
+  useEffect(() => {
+    if (gameMode !== 'CPU' || !isWinner) return;
+    const finalTime = cpuElapsed;
+    const isNewRecord = submitCpuTime(cpuLevel, finalTime);
+    setCpuResult({ time: finalTime, isNewRecord });
+    setCpuBestTimes(getCpuBestTimes());
+  }, [isWinner, gameMode]); // eslint-disable-line
+
+  // ゲームオーバー時（SINGLE）：スコア登録
+  useEffect(() => {
+    if (gameMode !== 'SINGLE' || !gameOver) return;
+    const result = submitSingleScore(score, lines, level);
+    setSingleTop5(result.records);
+    setSingleResult({ rank: result.rank, isNewRecord: result.isNewRecord });
+  }, [gameOver, gameMode]); // eslint-disable-line
+
   // --- 画面遷移ハンドラ ---
   const handleStartGame = useCallback((mode: 'SINGLE' | 'CPU') => {
     setShowTitle(false);
@@ -184,6 +252,10 @@ function App() {
   const handleCpuLevelSelected = useCallback((lv: 1 | 2 | 3 | 4 | 5) => {
     setCpuLevel(lv);
     setShowCpuLevel(false);
+    // タイマーリセット
+    cpuTimerStartRef.current = null;
+    setCpuElapsed(0);
+    setCpuResult(null);
     handleStartGame('CPU');
   }, [handleStartGame]);
 
@@ -216,6 +288,13 @@ function App() {
       setCurrentScreen('matching');
       resetGame('MULTI', false);
     } else {
+      // CPU モードはタイマーとリザルトをリセット
+      if (gameMode === 'CPU') {
+        cpuTimerStartRef.current = null;
+        setCpuElapsed(0);
+        setCpuResult(null);
+      }
+      if (gameMode === 'SINGLE') setSingleResult(null);
       runCountdownSequence(gameMode);
     }
   }, [gameMode, runCountdownSequence, resetGame]);
@@ -225,6 +304,10 @@ function App() {
     playerAttack, gameOver, isWinner, paused, gameStarted, score,
     bgmOn, seOn, onBgmToggle: handleBgmToggle, onSeToggle: handleSeToggle,
     onResume: togglePause, onRetry: handleRetry, onQuitToTitle: handleQuitToTitle,
+    // モード別リザルト
+    gameMode,
+    cpuElapsed, cpuResult,
+    singleTop5, singleResult,
   };
 
   const layoutProps = {
@@ -278,6 +361,7 @@ function App() {
           <CpuLevelSelectModal
             onSelect={handleCpuLevelSelected}
             onCancel={handleCpuLevelCancel}
+            bestTimes={cpuBestTimes}
           />
         )}
 

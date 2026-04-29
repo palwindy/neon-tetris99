@@ -1,10 +1,13 @@
+
 import React from 'react';
-import { Bot, X } from 'lucide-react';
+import { Bot, X, Timer } from 'lucide-react';
 import { audioService } from '../../services/audioService';
+import { CpuBestTimes, formatTime } from '../../services/recordsService';
 
 interface CpuLevelSelectModalProps {
   onSelect: (level: 1 | 2 | 3 | 4 | 5) => void;
   onCancel: () => void;
+  bestTimes?: CpuBestTimes;
 }
 
 const LEVEL_INFO: Record<number, { label: string; color: string; desc: string }> = {
@@ -15,7 +18,7 @@ const LEVEL_INFO: Record<number, { label: string; color: string; desc: string }>
   5: { label: 'MASTER', color: '#ef4444', desc: '最強' },
 };
 
-const CpuLevelSelectModal: React.FC<CpuLevelSelectModalProps> = ({ onSelect, onCancel }) => {
+const CpuLevelSelectModal: React.FC<CpuLevelSelectModalProps> = ({ onSelect, onCancel, bestTimes = {} }) => {
   const handleCancel = () => { audioService.playCancel(); onCancel(); };
   const handleSelect = (lv: 1 | 2 | 3 | 4 | 5) => { audioService.playOk(); onSelect(lv); };
 
@@ -38,6 +41,7 @@ const CpuLevelSelectModal: React.FC<CpuLevelSelectModalProps> = ({ onSelect, onC
         <div className="flex gap-3 w-full max-w-3xl justify-center">
           {([1, 2, 3, 4, 5] as const).map(lv => {
             const info = LEVEL_INFO[lv];
+            const best = bestTimes[lv];
             return (
               <button key={lv} onClick={() => handleSelect(lv)}
                 className="flex-1 max-w-[140px] flex flex-col items-center justify-center gap-1 py-4 rounded-xl border-2 bg-black/40 hover:bg-black/60 active:scale-95 transition-all"
@@ -49,6 +53,15 @@ const CpuLevelSelectModal: React.FC<CpuLevelSelectModalProps> = ({ onSelect, onC
                   style={{ color: info.color, textShadow: `0 0 8px ${info.color}` }}>Lv{lv}</span>
                 <span className="text-sm font-bold tracking-wider" style={{ color: info.color }}>{info.label}</span>
                 <span className="text-[10px] text-gray-400 tracking-wide">{info.desc}</span>
+                {/* ベストタイム */}
+                {best !== undefined ? (
+                  <div className="flex items-center gap-0.5 mt-1 text-[10px] text-yellow-300 font-mono">
+                    <Timer size={9} />
+                    {formatTime(best)}
+                  </div>
+                ) : (
+                  <div className="mt-1 text-[10px] text-gray-600 font-mono">-- : --</div>
+                )}
               </button>
             );
           })}
