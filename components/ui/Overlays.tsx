@@ -42,7 +42,13 @@ const Overlays: React.FC<OverlaysProps> = ({
 
   return (
     <>
-      {playerAttack && <PlayerAttackEffect key={playerAttack.id} damage={playerAttack.damage} />}
+      {playerAttack && (
+        <PlayerAttackEffect
+          key={playerAttack.id}
+          damage={playerAttack.damage}
+          mode={gameMode === 'MULTI' ? 'multi' : 'cpu'}
+        />
+      )}
 
       {/* GAME OVER（SINGLE） */}
       {gameOver && gameMode === 'SINGLE' && (

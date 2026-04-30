@@ -11,7 +11,7 @@ import {
   submitCpuTime, submitSingleScore, getSingleRecords, getCpuBestTimes,
   SingleRecord, CpuBestTimes,
 } from './services/recordsService';
-import { MultiPlayer } from './types';
+import { MultiPlayer, SlotConfig } from './types';
 
 import { LandscapeLayout } from './components/game/LandscapeLayout';
 import SettingsModal from './components/ui/SettingsModal';
@@ -20,7 +20,7 @@ import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 import SplashScreen from './components/ui/SplashScreen';
 import CpuLevelSelectModal from './components/ui/CpuLevelSelectModal';
 
-const version = "5.15";
+const version = "5.16";
 
 /**
  * 端末が縦持ち（ポートレート）の時、内側コンテンツを強制的に
@@ -83,6 +83,10 @@ function App() {
   // SINGLE ハイスコア
   const [singleTop5, setSingleTop5]   = useState<SingleRecord[]>(() => getSingleRecords());
   const [singleResult, setSingleResult] = useState<{ rank: number; isNewRecord: boolean } | null>(null);
+
+  // VS MULTI リトライ用：前回のルーム設定を保持
+  const [lastRoomSlots, setLastRoomSlots] = useState<SlotConfig[] | null>(null);
+  const [matchingKey,   setMatchingKey]   = useState(0); // MatchingScreen 再マウント用
 
   // --- ゲームコア ---
   const handleAttackSent = useCallback((lines: number) => {
@@ -238,6 +242,12 @@ function App() {
     setSingleResult({ rank: result.rank, isNewRecord: result.isNewRecord });
   }, [gameOver, gameMode]); // eslint-disable-line
 
+  // VS MULTI ゲーム開始時：ルーム設定を保存（リトライ用）
+  useEffect(() => {
+    if (gameMode !== 'MULTI' || !gameStarted || !roomConfig) return;
+    setLastRoomSlots(roomConfig.slots);
+  }, [gameMode, gameStarted, roomConfig]);
+
   // --- 画面遷移ハンドラ ---
   const handleStartGame = useCallback((mode: 'SINGLE' | 'CPU') => {
     setShowTitle(false);
@@ -289,6 +299,8 @@ function App() {
     if (gameMode === 'MULTI') {
       cpuOpponentManager.stopAll();
       multiplayerService.leaveRoom();
+      // MatchingScreen を再マウントして同じ設定で自動作成
+      setMatchingKey(k => k + 1);
       setCurrentScreen('matching');
       resetGame('MULTI', false);
     } else {
@@ -345,6 +357,8 @@ function App() {
 
         {!showSplash && currentScreen === 'matching' && (
           <MatchingScreen
+            key={matchingKey}
+            preloadSlots={isHost ? lastRoomSlots : null}
             onGameStart={handleMultiplayerGameStart}
             onBack={() => { setShowTitle(true); setCurrentScreen('title'); }}
             onOpenSettings={() => setShowSettings(true)}

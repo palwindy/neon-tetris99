@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { X, Settings, Bot, User } from 'lucide-react';
 import { audioService } from '../../services/audioService';
 import { multiplayerService } from '../../services/multiplayerService';
@@ -8,11 +8,13 @@ interface MatchingScreenProps {
   onGameStart: (roomId: string, players: MultiPlayer[]) => void;
   onBack: () => void;
   onOpenSettings: () => void;
+  /** リトライ時に渡す前回のスロット設定。ホストの場合のみ渡す。 */
+  preloadSlots?: SlotConfig[] | null;
 }
 
 type Mode = 'host' | 'guest';
 
-export const MatchingScreen: React.FC<MatchingScreenProps> = ({ onGameStart, onBack, onOpenSettings }) => {
+export const MatchingScreen: React.FC<MatchingScreenProps> = ({ onGameStart, onBack, onOpenSettings, preloadSlots }) => {
   const handleBack = () => {
     audioService.playCancel();
     multiplayerService.leaveRoom();
@@ -28,6 +30,7 @@ export const MatchingScreen: React.FC<MatchingScreenProps> = ({ onGameStart, onB
   const [inputRoomId, setInputRoomId] = useState('');
   const [copied, setCopied] = useState(false);
   const [joined, setJoined] = useState(false);
+  const preloadDoneRef = useRef(false);
 
   const [players, setPlayers] = useState<MultiPlayer[]>([]);
   const [config, setConfig] = useState<RoomConfig | null>(null);
@@ -44,6 +47,18 @@ export const MatchingScreen: React.FC<MatchingScreenProps> = ({ onGameStart, onB
       multiplayerService.removeConfigListener(setConfig);
     };
   }, []);
+
+  // リトライ時: preloadSlots があれば同じ設定でルームを自動作成してジョイン済み状態へ
+  useEffect(() => {
+    if (!preloadSlots || preloadSlots.length === 0 || preloadDoneRef.current) return;
+    preloadDoneRef.current = true;
+    (async () => {
+      const freshId = await multiplayerService.generateUniqueRoomId();
+      setRoomId(freshId);
+      await multiplayerService.joinRoom(freshId, preloadSlots);
+      setJoined(true);
+    })();
+  }, []); // eslint-disable-line
 
   const me = players.find(p => p.id === myId);
   const myStatus = me?.status;

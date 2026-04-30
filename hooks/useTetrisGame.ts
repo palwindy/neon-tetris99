@@ -543,6 +543,13 @@ export const useTetrisGame = ({
                 if (remain > 0) {
                     if (mode === 'MULTI' && onAttackSent) {
                         onAttackSent(remain);
+                        // VS MULTIでも送信ライン数を攻撃エフェクトとして表示
+                        setPlayerAttack({ damage: remain, id: Date.now() });
+                        if (playerAttackCleanupTimerRef.current) clearTimeout(playerAttackCleanupTimerRef.current);
+                        playerAttackCleanupTimerRef.current = window.setTimeout(() => {
+                            setPlayerAttack(null);
+                            playerAttackCleanupTimerRef.current = null;
+                        }, 1000);
                     }
                     if (mode === 'CPU') {
                         setLastAttackSent(remain);
