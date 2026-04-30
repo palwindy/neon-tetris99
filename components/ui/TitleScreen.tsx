@@ -3,11 +3,22 @@ import { User, Bot, Users, Settings } from 'lucide-react';
 import { audioService } from '../../services/audioService';
 
 const TitleLogo = () => (
-  <div className="mb-3 relative flex flex-col items-center scale-75 origin-top">
-    <h1 className="text-7xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-cyan-400 via-purple-500 to-pink-500 transform -skew-x-12 leading-none">NEON</h1>
-    <h1 className="text-4xl font-black italic tracking-tighter text-white transform -skew-x-12 -mt-1 leading-none">TETRIS</h1>
-    <h1 className="text-8xl font-black italic tracking-tighter text-white transform -skew-x-12 -mt-4 drop-shadow-[0_0_20px_rgba(6,182,212,1)] leading-none">99</h1>
-    <div className="absolute -inset-8 bg-purple-500/5 blur-3xl rounded-full -z-10 animate-pulse" />
+  <div className="mb-3 flex flex-col items-center">
+    <div className="relative scale-75 origin-center">
+      <div className="absolute -inset-8 bg-purple-300/30 blur-3xl rounded-full animate-pulse" />
+      <h1
+        className="text-8xl font-black italic tracking-tighter text-transparent bg-clip-text relative"
+        style={{ backgroundImage: 'linear-gradient(135deg, #06b6d4, #a855f7, #ec4899)' }}
+      >
+        NEON
+      </h1>
+    </div>
+    <h2
+      className="text-6xl font-black tracking-widest relative -mt-2"
+      style={{ color: '#1a1a2e', textShadow: '0 0 40px rgba(6,182,212,0.3)' }}
+    >
+      TETRIS<span className="text-purple-600">99</span>
+    </h2>
   </div>
 );
 

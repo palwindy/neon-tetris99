@@ -546,10 +546,11 @@ export const useTetrisGame = ({
                         // VS MULTIでも送信ライン数を攻撃エフェクトとして表示
                         setPlayerAttack({ damage: remain, id: Date.now() });
                         if (playerAttackCleanupTimerRef.current) clearTimeout(playerAttackCleanupTimerRef.current);
+                        const multiAnimMs = 900 + remain * 60 + 200;
                         playerAttackCleanupTimerRef.current = window.setTimeout(() => {
                             setPlayerAttack(null);
                             playerAttackCleanupTimerRef.current = null;
-                        }, 1000);
+                        }, multiAnimMs);
                     }
                     if (mode === 'CPU') {
                         setLastAttackSent(remain);
@@ -581,11 +582,12 @@ export const useTetrisGame = ({
             if (playerAttackCleanupTimerRef.current) {
                 clearTimeout(playerAttackCleanupTimerRef.current);
             }
-            // Set a new timer to clear the attack effect after animation duration
+            // アニメーション時間（GameEffects duration = 900 + damage*60）に合わせてクリーンアップ
+            const attackAnimMs = 900 + damage * 60 + 200;
             playerAttackCleanupTimerRef.current = window.setTimeout(() => {
                 setPlayerAttack(null);
                 playerAttackCleanupTimerRef.current = null;
-            }, 800);
+            }, attackAnimMs);
 
             if (nextHealth <= 0) {
                 dead = true;
@@ -1041,7 +1043,7 @@ useEffect(() => {
     }
   }, [grid, gameMode]);
 
-  const resetGame = (mode?: GameMode, autoStart: boolean = true) => {
+  const resetGame = (mode?: GameMode, autoStart: boolean = true, overrideCpuLevel?: number) => {
     setGameStarted(false); // 一旦停止させる
     setGrid(createGrid());
     setScore(0);
@@ -1056,7 +1058,11 @@ useEffect(() => {
     setClearingRows([]);
     setSpecialMessage(null);
     if (mode) setGameMode(mode);
-    setCpuHealth(cpuLevel * 20); // HP = レベル × 20（Lv1=20, Lv2=40, ..., Lv5=100）
+    // overrideCpuLevel: React setState 非同期問題を回避するため、呼び出し元から直接レベルを受け取る
+    const effectiveCpuLevel = overrideCpuLevel ?? cpuLevel;
+    setCpuHealth(effectiveCpuLevel * 20); // HP = レベル × 20（Lv1=20, Lv2=40, ..., Lv5=100）
+    // gameStateRef も即時同期（lockPiece のクロージャが参照する前に更新）
+    gameStateRef.current.cpuHealth = effectiveCpuLevel * 20;
     setNextAttackTime(0);
     setPendingGarbage(0); // Reset pending garbage
     remainingAttackTimeRef.current = 0; // Reset CPU attack timer ref

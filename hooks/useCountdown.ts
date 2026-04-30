@@ -3,7 +3,7 @@ import { audioService } from '../services/audioService';
 import { GameMode } from '../types';
 
 interface UseCountdownProps {
-  resetGame: (mode: GameMode, start: boolean) => void;
+  resetGame: (mode: GameMode, start: boolean, overrideCpuLevel?: number) => void;
   startGame: () => void;
   setIsCountdown: (v: boolean) => void;
   setCountdownValue: (v: string | number | null) => void;
@@ -15,10 +15,10 @@ export function useCountdown({
   setIsCountdown,
   setCountdownValue,
 }: UseCountdownProps) {
-  const runCountdownSequence = useCallback(async (mode: GameMode) => {
+  const runCountdownSequence = useCallback(async (mode: GameMode, overrideCpuLevel?: number) => {
     setIsCountdown(true);
     setCountdownValue('READY');
-    resetGame(mode, false); // 表示はするが落下させない
+    resetGame(mode, false, overrideCpuLevel); // 表示はするが落下させない
     audioService.stopBGM();
     audioService.playReady();
 

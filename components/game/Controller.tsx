@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { ControlButton } from '../Button';
 import { ArrowUp, ArrowDown, ArrowLeft, ArrowRight, RotateCw, RotateCcw } from 'lucide-react';
 
@@ -7,21 +7,36 @@ interface DPadProps {
   hardDrop: () => void;
 }
 
+// 左右キーを最後に押した時刻から GUARD_MS 以内は上キーを無視（誤タッチ防止）
+const H_GUARD_MS = 150;
+
 export const DPad: React.FC<DPadProps> = React.memo(({ move, hardDrop }) => {
+  const lastHorizTime = useRef(0);
   const btn = "flex items-center justify-center bg-gray-800 border-b-4 border-gray-950 active:border-b-0 active:translate-y-0.5 shadow-md touch-none select-none";
   const s = "clamp(52px, 14vw, 72px)";
+
+  const moveH = (dx: number) => {
+    lastHorizTime.current = Date.now();
+    move({ x: dx, y: 0 });
+  };
+
+  const safeHardDrop = () => {
+    if (Date.now() - lastHorizTime.current < H_GUARD_MS) return;
+    hardDrop();
+  };
+
   return (
     <div style={{ display: 'grid', gridTemplateColumns: `${s} ${s} ${s}`, gridTemplateRows: `${s} ${s} ${s}`, gap: '3px' }}>
       <div />
-      <ControlButton onAction={hardDrop} repeat={false} cooldown={500} className={`${btn} rounded-t-xl rounded-b-sm`} style={{ width: s, height: s }}>
+      <ControlButton onAction={safeHardDrop} repeat={false} cooldown={500} className={`${btn} rounded-t-xl rounded-b-sm`} style={{ width: s, height: s }}>
         <ArrowUp style={{ width: 'clamp(20px, 5vw, 28px)', height: 'clamp(20px, 5vw, 28px)' }} className="text-cyan-400" />
       </ControlButton>
       <div />
-      <ControlButton onAction={() => move({ x: -1, y: 0 })} repeat={true} repeatDelay={300} repeatInterval={150} className={`${btn} rounded-l-xl rounded-r-sm`} style={{ width: s, height: s }}>
+      <ControlButton onAction={() => moveH(-1)} repeat={true} repeatDelay={300} repeatInterval={150} className={`${btn} rounded-l-xl rounded-r-sm`} style={{ width: s, height: s }}>
         <ArrowLeft style={{ width: 'clamp(20px, 5vw, 28px)', height: 'clamp(20px, 5vw, 28px)' }} />
       </ControlButton>
       <div className="bg-gray-800 rounded-md" style={{ width: s, height: s }} />
-      <ControlButton onAction={() => move({ x: 1, y: 0 })} repeat={true} repeatDelay={300} repeatInterval={150} className={`${btn} rounded-r-xl rounded-l-sm`} style={{ width: s, height: s }}>
+      <ControlButton onAction={() => moveH(1)} repeat={true} repeatDelay={300} repeatInterval={150} className={`${btn} rounded-r-xl rounded-l-sm`} style={{ width: s, height: s }}>
         <ArrowRight style={{ width: 'clamp(20px, 5vw, 28px)', height: 'clamp(20px, 5vw, 28px)' }} />
       </ControlButton>
       <div />

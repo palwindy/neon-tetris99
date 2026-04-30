@@ -20,7 +20,7 @@ import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 import SplashScreen from './components/ui/SplashScreen';
 import CpuLevelSelectModal from './components/ui/CpuLevelSelectModal';
 
-const version = "5.16";
+const version = "5.17";
 
 /**
  * 端末が縦持ち（ポートレート）の時、内側コンテンツを強制的に
@@ -249,10 +249,10 @@ function App() {
   }, [gameMode, gameStarted, roomConfig]);
 
   // --- 画面遷移ハンドラ ---
-  const handleStartGame = useCallback((mode: 'SINGLE' | 'CPU') => {
+  const handleStartGame = useCallback((mode: 'SINGLE' | 'CPU', overrideCpuLevel?: number) => {
     setShowTitle(false);
     setCurrentScreen('game');
-    runCountdownSequence(mode);
+    runCountdownSequence(mode, overrideCpuLevel);
   }, [runCountdownSequence]);
 
   const handleStartCpu = useCallback(() => {
@@ -266,7 +266,8 @@ function App() {
     cpuTimerStartRef.current = null;
     setCpuElapsed(0);
     setCpuResult(null);
-    handleStartGame('CPU');
+    // setState は非同期なので lv を直接渡してHP初期値のズレを防ぐ
+    handleStartGame('CPU', lv);
   }, [handleStartGame]);
 
   // TitleScreen の selecting 状態をリセットするため key を使う
