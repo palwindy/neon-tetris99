@@ -20,7 +20,7 @@ import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 import SplashScreen from './components/ui/SplashScreen';
 import CpuLevelSelectModal from './components/ui/CpuLevelSelectModal';
 
-const version = "5.17";
+const version = "5.18";
 
 /**
  * 端末が縦持ち（ポートレート）の時、内側コンテンツを強制的に
@@ -295,12 +295,13 @@ function App() {
     setCurrentScreen('title');
   }, [gameMode, quitGame]);
 
-  const handleRetry = useCallback(() => {
+  const handleRetry = useCallback(async () => {
     audioService.stopAll();
     if (gameMode === 'MULTI') {
       cpuOpponentManager.stopAll();
-      multiplayerService.leaveRoom();
-      // MatchingScreen を再マウントして同じ設定で自動作成
+      // leaveRoom を await してから MatchingScreen をマウント
+      // （非同期完了前に joinRoom が呼ばれると roomId が '' に上書きされ setReady が無効になるため）
+      await multiplayerService.leaveRoom();
       setMatchingKey(k => k + 1);
       setCurrentScreen('matching');
       resetGame('MULTI', false);

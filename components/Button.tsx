@@ -117,6 +117,7 @@ export const ControlButton: React.FC<ButtonProps> = ({
       className={`relative select-none active:scale-95 transition-transform touch-none flex items-center justify-center ${className} ${disabled ? 'opacity-50' : ''}`}
       onTouchStart={handleStart}
       onTouchEnd={handleEnd}
+      onTouchCancel={handleEnd}
       onMouseDown={handleStart}
       onMouseUp={handleEnd}
       onMouseLeave={handleEnd}

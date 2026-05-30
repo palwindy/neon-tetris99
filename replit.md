@@ -31,6 +31,7 @@ Configured as a static site:
 - Public directory: `dist`
 
 ## Version History
+- **5.18** — (1) キー入力入りっぱなし修正：`ControlButton` に `onTouchCancel` ハンドラを追加（システム割り込み等でタッチが中断されても `isPressed` がリセットされリピートが止まる）。(2) VS MULTI リトライ後の開始ボタン無反応修正：`handleRetry` で `leaveRoom()` を await してから MatchingScreen をマウントするよう変更（非同期完了前に `joinRoom` が呼ばれると `this.roomId` が `''` に上書きされ `setReady()` が無効化されていた）。
 - **5.17** — (1) 攻撃エフェクト消失修正：クリーンアップタイマーをアニメーション時間（900+damage×60ms）に合わせて動的に設定（旧800ms固定でアニメーション途中で消えていた）。(2) VS CPU HPが前レベルの値になるバグ修正：`setCpuLevel`のReact非同期更新を回避し、`handleCpuLevelSelected`で`lv`を直接`resetGame`に渡すよう変更（`gameStateRef`も即時同期）。(3) 上キー誤タッチ防止：左右移動から150ms以内のハードドロップ入力をガード。(4) タイトルロゴをスプラッシュ画面と同じデザインに統一（NEON グラデーション＋TETRIS99 レイアウト）。
 - **5.16** — (1) VS MULTI リトライ時：ホストは同じスロット設定で新しい部屋を自動作成し、準備ボタンが押せる状態でマッチング画面へ戻る。ゲストは通常のマッチング画面へ戻る。(2) VS CPU リトライ：同じレベルでカウントダウンからやり直し（既存動作を維持）。(3) 攻撃エフェクト大幅強化：ダメージ/送信ライン数に応じて文字サイズ・色・グロウが段階変化（1=シアン小、2=黄色中、3=オレンジ大、4+=赤・極大）、ビーム・リング・パーティクル・フラッシュ演出追加。VS MULTI では「+NL」形式で表示。
 - **5.15** — VS CPU レベル選択「×」キャンセル後にVS CPUボタンが点滅したまま操作不能になるバグ修正（TitleScreen の `selecting` ローカル状態を key 再マウントでリセット）。タイトル画面のVS CPU・VS MULTIボタンに色付け（VS CPU: シアン→エメラルド、VS MULTI: オレンジ→ピンク）。
