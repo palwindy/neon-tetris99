@@ -31,6 +31,7 @@ Configured as a static site:
 - Public directory: `dist`
 
 ## Version History
+- **5.20** — アイコン・ファビコンをユーザー指定画像（ネオンTETRIS99デザイン）に差し替え。icon-512.png（512×512）・icon-192.png（192×192）・favicon.ico（16/32/48px）を再生成。
 - **5.19** — (1) タイトルロゴの「TETRIS」各文字にテトロミノカラー付与（T=黄、E=シアン、T=オレンジ、R=赤、I=青、S=緑）＋ネオングロウ。(2) PWAアイコン対応：512×512・192×192 PNG生成、manifest.json 作成（`purpose: any/maskable`）、index.html に `<link rel="manifest">` と `apple-touch-icon` 追加。Chromeインストール時のアイコンぼやけを解消。
 - **5.18** — (1) キー入力入りっぱなし修正：`ControlButton` に `onTouchCancel` ハンドラを追加（システム割り込み等でタッチが中断されても `isPressed` がリセットされリピートが止まる）。(2) VS MULTI リトライ後の開始ボタン無反応修正：`handleRetry` で `leaveRoom()` を await してから MatchingScreen をマウントするよう変更（非同期完了前に `joinRoom` が呼ばれると `this.roomId` が `''` に上書きされ `setReady()` が無効化されていた）。
 - **5.17** — (1) 攻撃エフェクト消失修正：クリーンアップタイマーをアニメーション時間（900+damage×60ms）に合わせて動的に設定（旧800ms固定でアニメーション途中で消えていた）。(2) VS CPU HPが前レベルの値になるバグ修正：`setCpuLevel`のReact非同期更新を回避し、`handleCpuLevelSelected`で`lv`を直接`resetGame`に渡すよう変更（`gameStateRef`も即時同期）。(3) 上キー誤タッチ防止：左右移動から150ms以内のハードドロップ入力をガード。(4) タイトルロゴをスプラッシュ画面と同じデザインに統一（NEON グラデーション＋TETRIS99 レイアウト）。
