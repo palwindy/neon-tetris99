@@ -13,11 +13,15 @@ const TitleLogo = () => (
         NEON
       </h1>
     </div>
-    <h2
-      className="text-6xl font-black tracking-widest relative -mt-2"
-      style={{ color: '#1a1a2e', textShadow: '0 0 40px rgba(6,182,212,0.3)' }}
-    >
-      TETRIS<span className="text-purple-600">99</span>
+    <h2 className="text-6xl font-black tracking-widest relative -mt-2 flex items-baseline">
+      {/* 各文字にテトロミノカラーを適用 */}
+      <span style={{ color: '#facc15', textShadow: '0 0 12px #facc1580' }}>T</span>
+      <span style={{ color: '#06b6d4', textShadow: '0 0 12px #06b6d480' }}>E</span>
+      <span style={{ color: '#f97316', textShadow: '0 0 12px #f9731680' }}>T</span>
+      <span style={{ color: '#ef4444', textShadow: '0 0 12px #ef444480' }}>R</span>
+      <span style={{ color: '#3b82f6', textShadow: '0 0 12px #3b82f680' }}>I</span>
+      <span style={{ color: '#22c55e', textShadow: '0 0 12px #22c55e80' }}>S</span>
+      <span className="text-purple-500" style={{ textShadow: '0 0 12px #a855f780' }}>99</span>
     </h2>
   </div>
 );

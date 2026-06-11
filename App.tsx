@@ -20,7 +20,7 @@ import { MatchingScreen } from './components/vsmulti/MatchingScreen';
 import SplashScreen from './components/ui/SplashScreen';
 import CpuLevelSelectModal from './components/ui/CpuLevelSelectModal';
 
-const version = "5.18";
+const version = "5.19";
 
 /**
  * 端末が縦持ち（ポートレート）の時、内側コンテンツを強制的に
